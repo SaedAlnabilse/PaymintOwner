@@ -23,6 +23,7 @@ import {
   markAllCashAlertsAsRead,
   deleteNotification,
 } from '../store/slices/notificationsSlice';
+import { ScreenContainer } from '../components/ScreenContainer';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { pushNotificationService } from '../services/pushNotificationService';
@@ -428,7 +429,7 @@ const NotificationsScreen = () => {
   const styles = createStyles(COLORS);
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer style={styles.container}>
       {/* Fixed Header */}
       <View style={styles.header}>
         <View>
@@ -548,7 +549,7 @@ const NotificationsScreen = () => {
           </View>
         )}
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 };
 
@@ -562,7 +563,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingTop: 20, // Reduced since SafeAreaView now handles the top spacing
     paddingBottom: 24,
   },
   headerSubtitle: {

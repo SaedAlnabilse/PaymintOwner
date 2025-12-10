@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Animated, ActivityIndicator, RefreshControl, StatusBar } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -134,10 +134,6 @@ const DashboardScreen = () => {
 
   return (
     <ScreenContainer style={{ backgroundColor: COLORS.background }}>
-      <StatusBar
-        backgroundColor={COLORS.background}
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>
@@ -340,7 +336,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 10, // Reduced since SafeAreaView now handles the top spacing
     backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,

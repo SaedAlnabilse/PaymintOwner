@@ -76,88 +76,17 @@ class PushNotificationService {
   }
 
   async setupFCM() {
-    try {
-      // Request permission for iOS
-      const authStatus = await messaging().requestPermission();
-      const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-      if (enabled) {
-        console.log('✅ FCM Authorization status:', authStatus);
-      }
-
-      // Get FCM token
-      const token = await messaging().getToken();
-      console.log('📱 FCM Token:', token);
-      
-      // Send token to backend server
-      await this.sendTokenToBackend(token);
-
-      // Handle foreground messages
-      messaging().onMessage(async remoteMessage => {
-        console.log('📨 Foreground message received:', remoteMessage);
-        await this.handleRemoteMessage(remoteMessage);
-      });
-
-      // Handle notification opened app
-      messaging().onNotificationOpenedApp(remoteMessage => {
-        console.log('📬 Notification opened app:', remoteMessage);
-      });
-
-      // Check if app was opened from a notification
-      const initialNotification = await messaging().getInitialNotification();
-      if (initialNotification) {
-        console.log('🚀 App opened from notification:', initialNotification);
-      }
-
-      // Listen for token refresh
-      messaging().onTokenRefresh(async newToken => {
-        console.log('🔄 FCM Token refreshed:', newToken);
-        await this.sendTokenToBackend(newToken);
-      });
-
-      console.log('✅ FCM configured successfully');
-    } catch (error) {
-      console.error('❌ Failed to setup FCM:', error);
-    }
+    // FCM setup disabled - using local notifications only
+    console.log('ℹ️ FCM disabled - using local notifications for cash alerts');
   }
 
+  // FCM token methods disabled - using local notifications only
   async sendTokenToBackend(token: string) {
-    try {
-      // Send FCM token to your backend
-      // Backend needs to create this endpoint: POST /api/users/fcm-token
-      await apiClient.post('/api/users/fcm-token', { fcmToken: token });
-      console.log('✅ FCM token sent to backend');
-      this.pendingFcmToken = null; // Clear pending token after successful send
-    } catch (error: any) {
-      // If 401 (not logged in), save token to send later
-      if (error?.response?.status === 401) {
-        console.log('⏳ User not logged in, saving FCM token to send after login');
-        this.pendingFcmToken = token;
-      } else {
-        console.error('❌ Failed to send FCM token to backend:', error);
-      }
-      // Don't throw - token sending failure shouldn't break the app
-    }
+    console.log('ℹ️ FCM token sending disabled - using local notifications');
   }
 
-  // Call this after user logs in to send any pending FCM token
   async sendPendingToken() {
-    if (this.pendingFcmToken) {
-      console.log('📤 Sending pending FCM token after login...');
-      await this.sendTokenToBackend(this.pendingFcmToken);
-    } else {
-      // If no pending token, get current token and send it
-      try {
-        const token = await messaging().getToken();
-        if (token) {
-          await this.sendTokenToBackend(token);
-        }
-      } catch (error) {
-        console.error('❌ Failed to get/send FCM token:', error);
-      }
-    }
+    console.log('ℹ️ FCM token sending disabled - using local notifications');
   }
 
   async handleRemoteMessage(remoteMessage: any) {
@@ -228,10 +157,14 @@ class PushNotificationService {
       return acc;
     }, {} as Record<string, string>) : undefined;
 
+    // Show hidden notification for privacy (always show generic message)
+    const hiddenTitle = '💰 Cash Alert';
+    const hiddenMessage = 'You have a new cash alert. Open the app to view details.';
+
     try {
       await notifee.displayNotification({
-        title: `💰 ${title}`,
-        body: message,
+        title: hiddenTitle,
+        body: hiddenMessage,
         data: stringifiedData,
         android: {
           channelId: 'cash-alerts',
@@ -244,17 +177,24 @@ class PushNotificationService {
           largeIcon: 'ic_launcher',
           style: {
             type: AndroidStyle.BIGTEXT,
-            text: message,
+            text: hiddenMessage,
           },
           sound: 'default',
-          vibrationPattern: [300, 500], // Even number of values required
+          vibrationPattern: [300, 500],
+          // Always show as private notification for security
+          visibility: 0, // PRIVATE - hides content on lock screen
+          // Make it persistent and high priority
+          ongoing: false,
+          autoCancel: true,
         },
         ios: {
           sound: 'default',
           categoryId: 'CASH_ALERT',
+          // iOS equivalent of private notification
+          interruptionLevel: 'active',
         },
       });
-      console.log('✅ Cash alert notification displayed');
+      console.log('✅ Cash alert notification displayed (hidden for privacy)');
     } catch (error) {
       console.error('❌ Failed to display cash alert:', error);
     }

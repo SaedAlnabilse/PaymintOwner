@@ -292,7 +292,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 20,
     paddingBottom: 16,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 10, // Reduced since SafeAreaView now handles the top spacing
     marginBottom: 20,
     backgroundColor: colors.white,
     borderRadius: 16,

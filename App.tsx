@@ -12,25 +12,39 @@ import GlobalErrorBoundary from './src/components/common/GlobalErrorBoundary';
 import { getTheme } from './src/theme/theme';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { pushNotificationService } from './src/services/pushNotificationService';
+import { backgroundNotificationService } from './src/services/backgroundNotificationService';
 
 function AppContent() {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
 
-  // Initialize push notifications
+  // Initialize push notifications and background service
   useEffect(() => {
-    pushNotificationService.configure();
-    pushNotificationService.requestPermissions();
+    const initializeServices = async () => {
+      await pushNotificationService.configure();
+      await pushNotificationService.requestPermissions();
+      
+      // Initialize background notification checking
+      await backgroundNotificationService.initialize();
+    };
+
+    initializeServices();
+
+    // Cleanup on unmount
+    return () => {
+      backgroundNotificationService.stop();
+    };
   }, []);
 
   return (
     <PaperProvider theme={theme as any}>
       <SafeAreaProvider>
+        <StatusBar
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+          backgroundColor={theme.colors.background}
+          translucent={false}
+        />
         <NavigationContainer>
-          <StatusBar
-            barStyle={isDarkMode ? "light-content" : "dark-content"}
-            backgroundColor={theme.colors.background}
-          />
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>

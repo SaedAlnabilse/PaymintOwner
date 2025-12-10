@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import moment from 'moment-timezone';
+import { ScreenContainer } from '../components/ScreenContainer';
 import { fetchOrderById, fetchOrderByOrderNumber } from '../services/inventory';
 import { fetchUserName } from '../services/reports';
 import { OrderDetails, OrderItem } from '../types/reports';
@@ -175,16 +176,16 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <ScreenContainer style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#7CC39F" />
         <Text style={styles.loadingText}>Loading receipt...</Text>
-      </View>
+      </ScreenContainer>
     );
   }
 
   if (error || !receipt) {
     return (
-      <View style={styles.errorContainer}>
+      <ScreenContainer style={styles.errorContainer}>
         <MaterialIcon name="error-outline" size={60} color="#D55263" />
         <Text style={styles.errorText}>{error || 'Receipt not found'}</Text>
         <TouchableOpacity
@@ -193,12 +194,12 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
         >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
-      </View>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer style={styles.container}>
       {/* Modern Header */}
       <View style={styles.headerGradient}>
         <View style={styles.header}>
@@ -447,7 +448,7 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
         {/* Footer Spacing */}
         <View style={{ height: 32 }} />
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 };
 
