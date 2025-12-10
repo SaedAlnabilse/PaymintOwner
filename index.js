@@ -79,9 +79,17 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 
   try {
     if (type === 'cash-alert') {
+      // For background/locked screen notifications, show hidden message for privacy
+      // The full details are only visible when the user opens the app
+      const isHidden = data?.isHidden === 'true';
+      const displayTitle = isHidden ? '💰 Cash Alert' : `💰 ${notification?.title || 'Cash Alert'}`;
+      const displayBody = isHidden 
+        ? 'You have a new cash alert. Open the app to view details.' 
+        : (notification?.body || '');
+
       await notifee.displayNotification({
-        title: `💰 ${notification?.title || 'Cash Alert'}`,
-        body: notification?.body || '',
+        title: displayTitle,
+        body: displayBody,
         data: stringifiedData,
         android: {
           channelId: 'cash-alerts',
@@ -90,9 +98,11 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
           color: '#F97316',
           smallIcon: 'ic_notification',
           largeIcon: 'ic_launcher',
-          style: { type: AndroidStyle.BIGTEXT, text: notification?.body || '' },
+          style: { type: AndroidStyle.BIGTEXT, text: displayBody },
           sound: 'default',
           vibrationPattern: [300, 500],
+          // Show on lock screen but with hidden content
+          visibility: isHidden ? 0 : 1, // 0 = PRIVATE (hidden on lock screen), 1 = PUBLIC
         },
         ios: {
           sound: 'default',

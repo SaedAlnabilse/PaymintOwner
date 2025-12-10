@@ -167,14 +167,18 @@ class PushNotificationService {
     
     // Determine notification type from data
     const type = data?.type || 'general';
+    const isHidden = data?.isHidden === 'true';
     
     try {
       if (type === 'cash-alert') {
-        await this.showCashAlert(
-          notification?.title || 'Cash Alert',
-          notification?.body || '',
-          data
-        );
+        // For foreground, we can show full details since user is in the app
+        // But if isHidden flag is set, respect it for consistency
+        const title = isHidden ? 'Cash Alert' : (notification?.title || 'Cash Alert');
+        const body = isHidden 
+          ? 'You have a new cash alert. Tap to view details.' 
+          : (notification?.body || '');
+        
+        await this.showCashAlert(title, body, data);
       } else if (type === 'stock-alert') {
         await this.showStockAlert(
           notification?.title || 'Stock Alert',

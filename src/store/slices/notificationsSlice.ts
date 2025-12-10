@@ -65,32 +65,58 @@ export const fetchNotifications = createAsyncThunk(
 
     const regularNotifications = response.data.notifications || [];
 
-    // Try to fetch admin notifications if user is an admin
-    let adminNotifications: any[] = [];
+    // Fetch cash alerts from the dedicated endpoint (for PaymintOwner app)
+    let cashAlerts: any[] = [];
     try {
-      const state: any = getState();
-      const userId = state.auth?.user?.id;
-      const userRole = state.auth?.user?.role;
-
-      if (userId && (userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'owner' || userRole === 'ADMIN')) {
-        const adminResponse = await apiClient.get(`/api/notifications/admin/${userId}`);
-        adminNotifications = (adminResponse.data || []).map((notif: any) => ({
-          ...notif,
-          isRead: notif.read,
-        }));
-      }
+      const cashAlertsResponse = await apiClient.get('/api/notifications/cash-alerts', {
+        params: { limit: String(limit), offset: String(offset) },
+      });
+      cashAlerts = cashAlertsResponse.data.notifications || [];
     } catch (_error) {
-      console.log('ℹ️ No admin notifications or not an admin user');
+      console.log('ℹ️ Failed to fetch cash alerts');
     }
 
-    // Combine all types of notifications
-    const allNotifications = [...adminNotifications, ...regularNotifications];
+    // Combine all types of notifications (cash alerts + regular)
+    const allNotifications = [...cashAlerts, ...regularNotifications];
 
     return {
       notifications: allNotifications,
       total: allNotifications.length,
       unreadCount: allNotifications.filter((n: any) => !n.isRead).length,
     };
+  },
+);
+
+// Fetch only cash alerts
+export const fetchCashAlerts = createAsyncThunk(
+  'notifications/fetchCashAlerts',
+  async ({ limit = 50, offset = 0 }: { limit?: number; offset?: number } = {}) => {
+    const response = await apiClient.get('/api/notifications/cash-alerts', {
+      params: { limit: String(limit), offset: String(offset) },
+    });
+    return {
+      notifications: response.data.notifications || [],
+      total: response.data.total || 0,
+      unreadCount: response.data.unreadCount || 0,
+    };
+  },
+);
+
+// Get cash alert unread count
+export const fetchCashAlertUnreadCount = createAsyncThunk(
+  'notifications/fetchCashAlertUnreadCount',
+  async () => {
+    const response = await apiClient.get('/api/notifications/cash-alerts/unread-count');
+    return response.data.count;
+  },
+);
+
+// Mark all cash alerts as read
+export const markAllCashAlertsAsRead = createAsyncThunk(
+  'notifications/markAllCashAlertsAsRead',
+  async () => {
+    const response = await apiClient.patch('/api/notifications/cash-alerts/read-all');
+    return response.data;
   },
 );
 
@@ -272,6 +298,36 @@ const notificationsSlice = createSlice({
       .addCase(cleanupOutdatedStockNotifications.fulfilled, (state, action) => {
         const deletedIds = action.payload.deletedNotificationIds || [];
         state.notifications = state.notifications.filter(n => !deletedIds.includes(n.id));
+        state.unreadCount = state.notifications.filter(n => !n.isRead).length;
+      })
+      // Cash alerts specific handlers
+      .addCase(fetchCashAlerts.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchCashAlerts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // Replace only cash alerts in the notifications array
+        const nonCashAlerts = state.notifications.filter(n => n.type !== 'CASH_ALERT');
+        state.notifications = [...action.payload.notifications, ...nonCashAlerts];
+        state.total = state.notifications.length;
+        state.unreadCount = state.notifications.filter(n => !n.isRead).length;
+      })
+      .addCase(fetchCashAlerts.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Failed to fetch cash alerts';
+      })
+      .addCase(fetchCashAlertUnreadCount.fulfilled, (state, action) => {
+        // This updates the cash alert specific count - could be used for badge
+        // For now, we'll just log it
+        console.log('Cash alert unread count:', action.payload);
+      })
+      .addCase(markAllCashAlertsAsRead.fulfilled, (state) => {
+        state.notifications.forEach((n) => {
+          if (n.type === 'CASH_ALERT') {
+            n.isRead = true;
+          }
+        });
         state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       })
       .addCase(logout, (state) => {

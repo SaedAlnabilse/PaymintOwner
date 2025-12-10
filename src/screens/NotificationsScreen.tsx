@@ -17,7 +17,10 @@ import { useNavigation } from '@react-navigation/native';
 import {
   fetchNotifications,
   fetchUnreadCount,
+  fetchCashAlerts,
+  fetchCashAlertUnreadCount,
   markNotificationAsRead,
+  markAllCashAlertsAsRead,
   deleteNotification,
 } from '../store/slices/notificationsSlice';
 import { getColors } from '../constants/colors';
@@ -169,49 +172,38 @@ const NotificationsScreen = () => {
   // Clear badge when user enters the notification page
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', async () => {
-      console.log('📭 User entered notifications page, marking regular notifications as read...');
+      console.log('📭 User entered notifications page, marking cash alerts as read...');
 
-      // Mark only regular notifications as read
-      const regularNotificationsToMarkRead = stockNotifications.filter(notif =>
-        notif.type !== 'STOCK_ALERT_RED' &&
-        notif.type !== 'STOCK_ALERT_YELLOW' &&
-        notif.type !== 'OUT_OF_STOCK' &&
-        notif.type !== 'PASSWORD_RESET' &&
-        !(notif.item && notif.item.availableStock === 0) &&
-        !notif.isRead
-      );
-
-      // Mark each regular notification as read individually
-      for (const notif of regularNotificationsToMarkRead) {
-        try {
-          await dispatch(markNotificationAsRead(notif.id)).unwrap();
-        } catch (error) {
-          console.error('Failed to mark notification as read:', error);
-        }
+      // Mark all cash alerts as read in one API call
+      try {
+        await dispatch(markAllCashAlertsAsRead()).unwrap();
+        console.log('✅ All cash alerts marked as read');
+      } catch (error) {
+        console.error('Failed to mark cash alerts as read:', error);
       }
 
       // Reload notifications to recalculate unread count
-      await dispatch(fetchNotifications({})).unwrap();
+      await loadNotifications();
     });
 
     return unsubscribe;
-  }, [navigation, dispatch, stockNotifications]);
+  }, [navigation, dispatch, loadNotifications]);
 
   const loadNotifications = useCallback(async () => {
     try {
+      // Fetch cash alerts from dedicated endpoint for better performance
+      const cashAlertsResult = await dispatch(fetchCashAlerts({})).unwrap();
+      console.log('💰 Cash Alerts loaded:', cashAlertsResult.notifications?.length || 0);
+
+      // Also fetch regular notifications
       const result = await dispatch(fetchNotifications({})).unwrap();
-      console.log('✅ Notifications loaded:', result.notifications?.length || 0);
+      console.log('✅ All notifications loaded:', result.notifications?.length || 0);
 
-      // Debug: Log notification types
-      if (result.notifications?.length > 0) {
-        const types = result.notifications.map((n: any) => n.type);
-        console.log('📋 Notification types:', types);
-        const cashAlerts = result.notifications.filter((n: any) => n.type === 'CASH_ALERT');
-        console.log('💰 Cash Alerts found:', cashAlerts.length);
-      }
-
-      // Also fetch the latest unread count to ensure badge is accurate
-      await dispatch(fetchUnreadCount()).unwrap();
+      // Fetch the latest unread counts
+      await Promise.all([
+        dispatch(fetchUnreadCount()).unwrap(),
+        dispatch(fetchCashAlertUnreadCount()).unwrap(),
+      ]);
 
     } catch (error) {
       console.error('❌ Failed to load notifications:', error);
@@ -240,10 +232,11 @@ const NotificationsScreen = () => {
   useEffect(() => {
     loadNotifications();
 
-    // Poll for new notifications every 5 seconds for real-time updates
+    // Poll for new notifications every 15 seconds (optimized to reduce API calls)
+    // Push notifications handle real-time alerts, polling is just for sync
     const interval = setInterval(() => {
       loadNotifications();
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [loadNotifications]);

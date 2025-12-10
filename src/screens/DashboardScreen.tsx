@@ -8,7 +8,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { RootState } from '../store/store';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
-import { getDashboardSummary, DashboardSummary } from '../services/dashboard';
+import { getOwnerDashboard, OwnerDashboard, DashboardSummary } from '../services/dashboard';
 
 const DashboardScreen = () => {
   const { isDarkMode } = useTheme();
@@ -17,6 +17,7 @@ const DashboardScreen = () => {
 
   const { user } = useSelector((state: RootState) => state.auth);
 
+  const [ownerData, setOwnerData] = useState<OwnerDashboard | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +32,12 @@ const DashboardScreen = () => {
       // Don't set loading true on refresh to avoid flickering
       if (!refreshing && !dashboardData) setLoading(true);
 
-      const data = await getDashboardSummary();
-      setDashboardData(data);
+      // OPTIMIZED: Single API call for all dashboard data
+      const data = await getOwnerDashboard();
+      setOwnerData(data);
+      setDashboardData(data.metrics);
+      
+      console.log(`✅ Dashboard loaded in single API call (store: ${data.storeStatus}, alerts: ${data.cashAlerts.unreadCount})`);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard');
     } finally {
@@ -159,7 +164,7 @@ const DashboardScreen = () => {
           <View style={styles.featuredCard}>
             <View style={styles.featuredCardHeader}>
               <Text style={styles.featuredCardLabel}>Today's Sales</Text>
-              {(dashboardData?.type === 'CURRENT_SHIFT' || dashboardData?.shiftStatus === 'ACTIVE') ? (
+              {(ownerData?.storeStatus === 'OPEN' || dashboardData?.shiftStatus === 'ACTIVE') ? (
                 <View style={styles.statusIndicator}>
                   <View style={[styles.statusDot, { backgroundColor: '#FFFFFF' }]} />
                   <Text style={styles.statusIndicatorText}>Store Open</Text>
@@ -172,6 +177,18 @@ const DashboardScreen = () => {
               )}
             </View>
             <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
+            {/* Cash Alert Badge */}
+            {ownerData?.cashAlerts?.unreadCount > 0 && (
+              <TouchableOpacity 
+                style={styles.alertBadge}
+                onPress={() => navigation.navigate('Notifications')}
+              >
+                <Icon name="alert-circle" size={16} color="#FFF" />
+                <Text style={styles.alertBadgeText}>
+                  {ownerData.cashAlerts.unreadCount} Cash Alert{ownerData.cashAlerts.unreadCount > 1 ? 's' : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Metrics Grid */}
@@ -415,6 +432,22 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -1.5,
+  },
+  alertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  alertBadgeText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   statsGrid: {
     flexDirection: 'row',

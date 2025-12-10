@@ -1,18 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Text, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import moment from 'moment-timezone';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
-import { getUsers, User } from '../services/users';
-import { getSalesSummary, getLiveShiftReport } from '../services/reports';
+import { getStaffOverview, StaffMember as StaffMemberType } from '../services/dashboard';
 
-interface StaffMember extends User {
-  status: 'Clocked In' | 'Clocked Out';
-  todaySales: number;
-  todayHours: number;
-  initials: string;
+// Use the optimized StaffMember type from dashboard service
+interface StaffMember extends StaffMemberType {
+  // Additional fields if needed
 }
 
 const StaffScreen = () => {
@@ -45,95 +41,26 @@ const StaffScreen = () => {
 
   const fetchStaffData = useCallback(async () => {
     try {
-      const users = await getUsers();
-      const todayStart = moment().tz('Asia/Amman').startOf('day').toISOString();
-      const todayEnd = moment().tz('Asia/Amman').endOf('day').toISOString();
-
-      const staffPromises = users.map(async (user) => {
-        try {
-          // Fetch Summary for Sales and Historical Hours
-          let summary;
-          try {
-            summary = await getSalesSummary(todayStart, todayEnd, user.id);
-          } catch (summaryError: any) {
-            console.warn(`Could not fetch summary for user ${user.name}:`, summaryError.message);
-            summary = {
-              totalNetSales: 0,
-              totalHoursWorked: 0,
-              totalCardSales: 0,
-              totalCashSales: 0,
-              totalOtherPayments: 0,
-              totalOrders: 0,
-              totalRefunds: 0,
-              totalPayIn: 0,
-              totalPayOut: 0,
-            };
-          }
-
-          // Fetch Live Shift for Status and Current Hours
-          let liveReport;
-          let isClockedIn = false;
-          let shiftStart = null;
-
-          try {
-            liveReport = await getLiveShiftReport(user.id);
-            shiftStart = liveReport.shiftStartTime || liveReport.shift?.startTime;
-            isClockedIn = !!shiftStart;
-          } catch (shiftError: any) {
-            // 404 is expected when user is not clocked in - don't log it
-            const is404 = shiftError.response?.status === 404 || shiftError.message?.includes('404');
-            if (!is404) {
-              console.warn(`Could not fetch shift for user ${user.name}:`, shiftError.message);
-            }
-            isClockedIn = false;
-            shiftStart = null;
-          }
-
-          // Calculate hours
-          let totalHours = summary.totalHoursWorked || 0;
-          if (isClockedIn && shiftStart) {
-            const start = moment(shiftStart);
-            const now = moment();
-            const currentDurationHours = moment.duration(now.diff(start)).asHours();
-            totalHours += currentDurationHours;
-          }
-
-          const initials = user.name
-            ? user.name.split(' ').map((n: string) => n.charAt(0)).join('').substring(0, 2).toUpperCase()
-            : '??';
-
-          return {
-            ...user,
-            status: isClockedIn ? 'Clocked In' : 'Clocked Out',
-            todaySales: summary.totalNetSales || 0,
-            todayHours: totalHours,
-            initials,
-          } as StaffMember;
-        } catch (error) {
-          console.error(`Error fetching data for user ${user.name}:`, error);
-          return {
-            ...user,
-            status: 'Clocked Out',
-            todaySales: 0,
-            todayHours: 0,
-            initials: user.name ? user.name.charAt(0).toUpperCase() : '?',
-          } as StaffMember;
-        }
-      });
-
-      const fetchedStaff = await Promise.all(staffPromises);
-
-      // Calculate stats
-      const clockedInCount = fetchedStaff.filter(s => s.status === 'Clocked In').length;
+      // OPTIMIZED: Single API call to get all staff data
+      const data = await getStaffOverview();
+      
+      // Map the response to our StaffMember interface
+      const fetchedStaff: StaffMember[] = data.staff.map(user => ({
+        ...user,
+        status: user.isClockedIn ? 'Clocked In' : 'Clocked Out',
+        todaySales: user.todaySales,
+        todayHours: user.todayHours,
+      }));
 
       setStaffList(fetchedStaff);
       setStats({
-        totalStaff: fetchedStaff.length,
-        clockedIn: clockedInCount,
-        activeCount: clockedInCount,
-        offlineCount: fetchedStaff.length - clockedInCount
+        totalStaff: data.summary.totalStaff,
+        clockedIn: data.summary.clockedIn,
+        activeCount: data.summary.clockedIn,
+        offlineCount: data.summary.clockedOut,
       });
 
+      console.log(`✅ Staff data loaded: ${fetchedStaff.length} users in single API call`);
     } catch (error) {
       console.error('Failed to fetch staff data:', error);
     } finally {
