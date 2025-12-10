@@ -23,6 +23,7 @@ import { checkAuthStatus } from '../store/slices/authSlice';
 import { AppTheme } from '../theme/theme';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useAppStateAuth } from '../hooks/useAppStateAuth';
 
 const Drawer = createDrawerNavigator();
 const Stack = createNativeStackNavigator();
@@ -143,6 +144,9 @@ const DrawerNavigator = () => {
 const AppNavigator = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
+
+  // Handle app state changes for authentication
+  useAppStateAuth();
 
   useEffect(() => {
     dispatch(checkAuthStatus());

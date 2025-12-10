@@ -1,5 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, LoginCredentials } from '../../services/authService';
+
+const APP_BACKGROUND_TIME_KEY = '@app_background_time';
 
 interface AuthState {
   token: string | null;
@@ -15,6 +18,15 @@ const initialState: AuthState = {
   isLoading: true,
   user: null,
   error: null,
+};
+
+// Helper function to clear background time
+const clearBackgroundTime = async () => {
+  try {
+    await AsyncStorage.removeItem(APP_BACKGROUND_TIME_KEY);
+  } catch (error) {
+    console.error('Failed to clear background time:', error);
+  }
 };
 
 export const loginUser = createAsyncThunk(
@@ -45,11 +57,33 @@ export const checkAuthStatus = createAsyncThunk(
   'auth/checkStatus',
   async (_, { rejectWithValue }) => {
     try {
-      // Always require fresh login on app start - clear any stored session
-      await authService.logout();
-      return rejectWithValue('Login required');
+      console.log('🔐 Checking authentication status...');
+      const token = await authService.getToken();
+      const user = await authService.getUser();
+      
+      if (!token || !user) {
+        console.log('🔐 No stored session found');
+        return rejectWithValue('No stored session found');
+      }
+
+      console.log('🔐 Found stored session, verifying token validity...');
+      // Verify token is still valid by making a test API call
+      try {
+        const profileResponse = await authService.getProfile();
+        console.log('🔐 Token is valid, user authenticated');
+        return {
+          token,
+          user: profileResponse
+        };
+      } catch (apiError: any) {
+        console.log('🔐 Token is invalid, clearing stored data');
+        // Token is invalid, clear stored data
+        await authService.logout();
+        return rejectWithValue('Session expired');
+      }
     } catch (error: any) {
-      return rejectWithValue('Login required');
+      console.log('🔐 Authentication check failed:', error.message);
+      return rejectWithValue('Authentication check failed');
     }
   }
 );
@@ -85,6 +119,11 @@ const authSlice = createSlice({
         state.isAuthenticated = isAdminOrOwner;
         state.isLoading = false;
         state.error = isAdminOrOwner ? null : 'This app is for administrators only';
+        
+        // Clear any stored background time since user just logged in
+        if (isAdminOrOwner) {
+          clearBackgroundTime();
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
