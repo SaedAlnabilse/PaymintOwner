@@ -10,6 +10,14 @@ class BackgroundNotificationService {
   private appStateSubscription: any = null;
 
   async initialize() {
+    // POLLING DISABLED: We are now using real-time Push Notifications (FCM)
+    // This improves performance and battery life, and ensures notifications work
+    // when the app is killed.
+    console.log('ℹ️ [Background] Polling disabled - using FCM for real-time notifications');
+    return; 
+    
+    /* 
+    Legacy Polling Logic (Disabled)
     if (this.isInitialized) return;
 
     console.log('🔄 [Background] Initializing background notification service');
@@ -25,44 +33,21 @@ class BackgroundNotificationService {
 
     this.isInitialized = true;
     console.log('✅ [Background] Background notification service initialized');
+    */
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    console.log(`📱 [Background] App state changed: ${this.appState} → ${nextAppState}`);
-    this.appState = nextAppState;
-
-    if (nextAppState === 'background' || nextAppState === 'inactive') {
-      // App went to background - increase polling frequency for notifications
-      this.startBackgroundPolling(10000); // Check every 10 seconds
-    } else if (nextAppState === 'active') {
-      // App became active - reduce polling frequency
-      this.startBackgroundPolling(30000); // Check every 30 seconds
-    }
+    // Disabled
   };
 
   private async loadInitialCashAlerts() {
-    try {
-      const response = await apiClient.get('/api/notifications/cash-alerts?limit=50');
-      const cashAlerts = response.data.notifications || [];
-      this.lastCashAlertIds = new Set(cashAlerts.map((alert: any) => alert.id as string));
-      console.log(`📊 [Background] Loaded ${cashAlerts.length} existing cash alerts as baseline`);
-    } catch (error) {
-      console.error('❌ [Background] Failed to load initial cash alerts:', error);
-    }
+    // Disabled
   }
 
   private startBackgroundPolling(interval: number = 30000) {
-    // Clear existing interval
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-    }
-
-    // Start new interval
-    this.intervalId = setInterval(() => {
-      this.checkForNewCashAlerts();
-    }, interval);
-
-    console.log(`⏰ [Background] Started polling every ${interval / 1000} seconds`);
+    // Disabled
+    console.log('ℹ️ [Background] Background polling is disabled');
+    return;
   }
 
   private async checkForNewCashAlerts() {

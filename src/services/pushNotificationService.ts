@@ -76,17 +76,62 @@ class PushNotificationService {
   }
 
   async setupFCM() {
-    // FCM setup disabled - using local notifications only
-    console.log('ℹ️ FCM disabled - using local notifications for cash alerts');
+    try {
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (enabled) {
+        console.log('✅ FCM Authorization status:', authStatus);
+        
+        // Get the token
+        const token = await messaging().getToken();
+        console.log('🔥 FCM Token:', token);
+        
+        if (token) {
+          await this.sendTokenToBackend(token);
+        }
+
+        // Listen for token refreshes
+        messaging().onTokenRefresh(async newToken => {
+          console.log('🔥 FCM Token Refreshed:', newToken);
+          await this.sendTokenToBackend(newToken);
+        });
+
+        // Listen for foreground messages
+        messaging().onMessage(async remoteMessage => {
+          console.log('📩 Received foreground message:', remoteMessage);
+          await this.handleRemoteMessage(remoteMessage);
+        });
+      } else {
+        console.log('❌ FCM Permission denied');
+      }
+    } catch (error) {
+      console.error('❌ Failed to setup FCM:', error);
+    }
   }
 
-  // FCM token methods disabled - using local notifications only
   async sendTokenToBackend(token: string) {
-    console.log('ℹ️ FCM token sending disabled - using local notifications');
+    try {
+      // Store token locally in case we need to retry later (e.g., after login)
+      this.pendingFcmToken = token;
+      
+      // Try to send to backend
+      await apiClient.post('/api/users/fcm-token', { fcmToken: token });
+      console.log('✅ FCM token sent to backend');
+      this.pendingFcmToken = null; // Clear pending token on success
+    } catch (error) {
+      console.log('⚠️ Failed to send FCM token to backend (likely not logged in). Stored for retry.');
+      // Do not log the error details to avoid noise, as this is expected when not logged in
+    }
   }
 
   async sendPendingToken() {
-    console.log('ℹ️ FCM token sending disabled - using local notifications');
+    if (this.pendingFcmToken) {
+      console.log('🔄 Retry sending pending FCM token...');
+      await this.sendTokenToBackend(this.pendingFcmToken);
+    }
   }
 
   async handleRemoteMessage(remoteMessage: any) {
