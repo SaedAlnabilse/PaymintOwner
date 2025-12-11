@@ -10,6 +10,7 @@ export interface Item {
   trackStock: boolean;
   availableStock?: number;
   imageUrl?: string;
+  type?: 'ITEM' | 'ADDON' | 'item' | 'addon';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -22,6 +23,7 @@ export interface CreateItemDto {
   isAvailable?: boolean;
   trackStock?: boolean;
   availableStock?: number;
+  type?: 'item' | 'addon';
 }
 
 export interface UpdateItemDto {
@@ -32,6 +34,7 @@ export interface UpdateItemDto {
   isAvailable?: boolean;
   trackStock?: boolean;
   availableStock?: number;
+  type?: 'item' | 'addon';
 }
 
 class ItemsService {

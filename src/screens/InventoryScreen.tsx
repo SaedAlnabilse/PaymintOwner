@@ -20,12 +20,12 @@ const InventoryScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const dispatch = useDispatch<AppDispatch>();
-  
+
   // Get notifications from Redux state
   const { notifications, isLoading: notificationsLoading } = useSelector(
     (state: RootState) => state.notifications
   );
-  
+
   // Filter stock alerts from notifications (exclude held orders and other non-stock notifications)
   const stockAlerts = useMemo(() => {
     const stockAlertTypes = ['STOCK_ALERT_YELLOW', 'STOCK_ALERT_RED', 'OUT_OF_STOCK'];
@@ -52,7 +52,7 @@ const InventoryScreen = () => {
     }
   };
 
-  const filteredItems = items.filter(item => 
+  const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -64,24 +64,45 @@ const InventoryScreen = () => {
     return { label: `${stock} in stock`, color: COLORS.primary, bg: COLORS.successBg, icon: 'check-circle' };
   };
 
+  const getItemType = (item: Item): 'item' | 'addon' => {
+    // Use the real type from API - map ITEM/ADDON to lowercase for display
+    if (item.type) {
+      return item.type.toLowerCase() as 'item' | 'addon';
+    }
+    // Default to 'item' if type is not set
+    return 'item';
+  };
+
   const renderStockItem = ({ item }: { item: Item }) => {
     const stockStatus = getStockStatus(item);
-    
+    const itemType = getItemType(item);
+
     return (
       <View style={[styles.itemCard, { backgroundColor: COLORS.white }]}>
         <View style={styles.itemMainContent}>
           <View style={[styles.itemIconContainer, { backgroundColor: COLORS.containerGray }]}>
-            <Icon 
-              name="package-variant" 
-              size={28} 
-              color={COLORS.primary} 
+            <Icon
+              name="package-variant"
+              size={28}
+              color={COLORS.primary}
             />
           </View>
-          
+
           <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, { color: COLORS.textPrimary }]} numberOfLines={1}>
-              {item.name}
-            </Text>
+            <View style={styles.itemNameRow}>
+              <Text style={[styles.itemName, { color: COLORS.textPrimary }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <View style={[styles.typeBadge, {
+                backgroundColor: itemType === 'addon' ? COLORS.warningBg : COLORS.badgeBg
+              }]}>
+                <Text style={[styles.typeBadgeText, {
+                  color: itemType === 'addon' ? COLORS.warning : COLORS.primary
+                }]}>
+                  {itemType === 'addon' ? 'Add-on' : 'Item'}
+                </Text>
+              </View>
+            </View>
             <View style={styles.itemMetaRow}>
               <Text style={[styles.itemPrice, { color: COLORS.primary }]}>
                 ${item.price.toFixed(2)}
@@ -133,7 +154,7 @@ const InventoryScreen = () => {
               {activeTab === 'stock' ? `${filteredItems.length} items` : `${stockAlerts.length} alerts`}
             </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.refreshButton, { backgroundColor: COLORS.badgeBg }]}
             onPress={loadItems}
           >
@@ -142,51 +163,51 @@ const InventoryScreen = () => {
         </View>
 
         <View style={styles.tabs}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'stock' && styles.tabActive]}
             onPress={() => setActiveTab('stock')}
           >
             <View style={styles.tabContent}>
               <View style={styles.tabLeft}>
-                <Icon 
-                  name="package-variant" 
-                  size={18} 
-                  color={activeTab === 'stock' ? COLORS.primary : COLORS.textSecondary} 
+                <Icon
+                  name="package-variant"
+                  size={18}
+                  color={activeTab === 'stock' ? COLORS.primary : COLORS.textSecondary}
                 />
                 <Text style={[styles.tabText, { color: activeTab === 'stock' ? COLORS.primary : COLORS.textSecondary }]}>
                   Stock List
                 </Text>
               </View>
-              <View style={[styles.tabBadge, { 
-                backgroundColor: COLORS.primary 
+              <View style={[styles.tabBadge, {
+                backgroundColor: COLORS.primary
               }]}>
-                <Text style={[styles.tabBadgeText, { 
-                  color: COLORS.white 
+                <Text style={[styles.tabBadgeText, {
+                  color: COLORS.white
                 }]}>
                   {filteredItems.length}
                 </Text>
               </View>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'alerts' && styles.tabActive]}
             onPress={() => setActiveTab('alerts')}
           >
             <View style={styles.tabContent}>
               <View style={styles.tabLeft}>
-                <Icon 
-                  name="bell-alert" 
-                  size={18} 
-                  color={activeTab === 'alerts' ? COLORS.primary : COLORS.textSecondary} 
+                <Icon
+                  name="bell-alert"
+                  size={18}
+                  color={activeTab === 'alerts' ? COLORS.primary : COLORS.textSecondary}
                 />
                 <Text style={[styles.tabText, { color: activeTab === 'alerts' ? COLORS.primary : COLORS.textSecondary }]}>
                   Alerts
                 </Text>
               </View>
-              <View style={[styles.tabBadge, { 
+              <View style={[styles.tabBadge, {
                 backgroundColor: COLORS.error
               }]}>
-                <Text style={[styles.tabBadgeText, { 
+                <Text style={[styles.tabBadgeText, {
                   color: COLORS.white
                 }]}>
                   {stockAlerts.length}
@@ -200,7 +221,7 @@ const InventoryScreen = () => {
       {activeTab === 'stock' && (
         <View style={styles.searchContainer}>
           <Icon name="magnify" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
-          <TextInput 
+          <TextInput
             style={[styles.searchInput, { color: COLORS.textPrimary, backgroundColor: COLORS.surface }]}
             placeholder="Search items by name..."
             placeholderTextColor={COLORS.textTertiary}
@@ -208,7 +229,7 @@ const InventoryScreen = () => {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.clearButton}
               onPress={() => setSearchQuery('')}
             >
@@ -242,10 +263,10 @@ const InventoryScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={[styles.emptyIconContainer, { backgroundColor: COLORS.cardBg }]}>
-                <Icon 
-                  name="package-variant-closed" 
-                  size={56} 
-                  color={COLORS.textTertiary} 
+                <Icon
+                  name="package-variant-closed"
+                  size={56}
+                  color={COLORS.textTertiary}
                 />
               </View>
               <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>
@@ -267,10 +288,10 @@ const InventoryScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={[styles.emptyIconContainer, { backgroundColor: COLORS.cardBg }]}>
-                <Icon 
-                  name="bell-check" 
-                  size={56} 
-                  color={COLORS.textTertiary} 
+                <Icon
+                  name="bell-check"
+                  size={56}
+                  color={COLORS.textTertiary}
                 />
               </View>
               <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>
@@ -460,11 +481,30 @@ const createStyles = (colors: any) => StyleSheet.create({
   itemInfo: {
     flex: 1,
   },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   itemName: {
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 6,
     letterSpacing: -0.2,
+    flex: 1,
+    marginRight: 8,
+  },
+  typeBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   itemMetaRow: {
     flexDirection: 'row',

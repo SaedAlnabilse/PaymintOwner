@@ -57,7 +57,7 @@ const DrawerNavigator = () => {
         drawerLabelStyle: {
           fontSize: 14,
           fontWeight: '600',
-          marginLeft: -10,
+          marginLeft: 4,
         },
         drawerItemStyle: {
           borderRadius: 12,

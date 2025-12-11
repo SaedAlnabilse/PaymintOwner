@@ -772,7 +772,7 @@ const ReportsScreen = () => {
                <Text style={[styles.statValue, { color: COLORS.red }]}>{formatCurrency(calculatedRefunds)}</Text>
             </View>
 
-            {/* Cash In/Out Card - Clickable */}
+            {/* Pay In/Out Card - Clickable */}
             <TouchableOpacity 
                 style={[styles.statCardClickable, { borderLeftColor: COLORS.orange }]}
                 onPress={() => setShowPayInOutModal(true)}
@@ -782,7 +782,7 @@ const ReportsScreen = () => {
                  <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
                    <MaterialCommunityIcon name="bank-transfer" size={20} color={COLORS.orange} />
                  </View>
-                 <Text style={styles.statLabel}>CASH IN/OUT</Text>
+                 <Text style={styles.statLabel}>PAY IN/OUT</Text>
                  <View>
                      <Text style={[styles.statSubValue, { color: COLORS.green }]}>+{formatCurrency(summary?.totalPayIn ?? 0)}</Text>
                      <Text style={[styles.statSubValue, { color: COLORS.red }]}>-{formatCurrency(summary?.totalPayOut ?? 0)}</Text>

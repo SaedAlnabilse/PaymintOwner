@@ -218,14 +218,6 @@ const StaffScreen = () => {
               <Text style={styles.summaryCardValue}>{stats.clockedIn}</Text>
               <Text style={styles.summaryCardLabel}>Clocked In</Text>
             </View>
-
-            <View style={[styles.summaryCard, { backgroundColor: COLORS.warning }]}>
-              <View style={styles.summaryIconContainer}>
-                <Icon name="percent" size={24} color={COLORS.white} />
-              </View>
-              <Text style={styles.summaryCardValue}>--%</Text>
-              <Text style={styles.summaryCardLabel}>Labor Cost</Text>
-            </View>
           </View>
 
           <View style={styles.sectionHeader}>

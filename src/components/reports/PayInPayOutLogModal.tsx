@@ -105,10 +105,10 @@ const PayInPayOutLogModal: React.FC<PayInPayOutLogModalProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>
               {type === 'PAY_IN'
-                ? 'Cash In Log'
+                ? 'Pay In Log'
                 : type === 'PAY_OUT'
-                  ? 'Cash Out Log'
-                  : 'Cash Log'}
+                  ? 'Pay Out Log'
+                  : 'Pay Log'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Icon name="close" size={24} color={COLORS.textPrimary} />
