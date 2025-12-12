@@ -77,7 +77,7 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
           // Fix unknown employee name
           // Check both employeeId and userId, prioritizing employeeId if available
           const idToFetch = data.employeeId || (data as any).userId;
-          
+
           if ((!data.employeeName || data.employeeName === 'Unknown') && idToFetch) {
             try {
               console.log('🔍 Fetching missing employee name for ID:', idToFetch);
@@ -178,7 +178,7 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
     return (
       <ScreenContainer style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#7CC39F" />
-        <Text style={styles.loadingText}>Loading receipt...</Text>
+        <Text style={styles.loadingText}>Loading Receipt...</Text>
       </ScreenContainer>
     );
   }
@@ -187,7 +187,7 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
     return (
       <ScreenContainer style={styles.errorContainer}>
         <MaterialIcon name="error-outline" size={60} color="#D55263" />
-        <Text style={styles.errorText}>{error || 'Receipt not found'}</Text>
+        <Text style={styles.errorText}>{error || 'Receipt Not Found'}</Text>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -303,7 +303,7 @@ const ReceiptDetailScreen = ({ route, navigation }: Props) => {
           <View style={styles.warningCard}>
             <MaterialIcon name="info" size={18} color="#D0C962" />
             <Text style={styles.warningText}>
-              Detailed item information not available
+              Detailed Item Information Not Available
             </Text>
           </View>
         )}

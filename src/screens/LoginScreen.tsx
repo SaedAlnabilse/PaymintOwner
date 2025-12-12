@@ -143,7 +143,7 @@ const LoginScreen = () => {
           password: password.trim(),
         }),
       ).unwrap();
-      
+
       // Check if user is admin or owner
       const userRole = result?.user?.role;
       if (!isAdminOrOwner(userRole)) {
@@ -152,7 +152,7 @@ const LoginScreen = () => {
         setShowAdminOnlyModal(true);
         return;
       }
-      
+
       // Success - show success loading
       setShowSuccessLoading(true);
     } catch (err: any) {
@@ -173,7 +173,7 @@ const LoginScreen = () => {
     <View style={styles.container}>
       <LoadingModal
         visible={showSuccessLoading}
-        text="Logging in..."
+        text="Logging In..."
         success={showSuccessLoading}
       />
 
@@ -191,7 +191,7 @@ const LoginScreen = () => {
             </View>
             <Text style={styles.adminOnlyTitle}>Admin Access Only</Text>
             <Text style={styles.adminOnlyMessage}>
-              This app is for administrators only. Please contact your manager if you need access.
+              This App Is For Administrators Only. Please Contact Your Manager If You Need Access.
             </Text>
             <TouchableOpacity
               style={styles.adminOnlyButton}
@@ -269,7 +269,7 @@ const LoginScreen = () => {
                   <View style={styles.headerTextContainer}>
                     <Text style={styles.welcomeText}>Welcome Back!</Text>
                     <Text style={styles.instructionText}>
-                      Sign in to access your dashboard
+                      Sign In To Access Your Dashboard
                     </Text>
                   </View>
                 </View>
@@ -326,7 +326,7 @@ const LoginScreen = () => {
                 <View style={styles.footerBadge}>
                   <MaterialCommunityIcon name="information" size={14} color="#64748B" />
                   <Text style={styles.footerText}>
-                    Administrator credentials required
+                    Administrator Credentials Required
                   </Text>
                 </View>
               </View>

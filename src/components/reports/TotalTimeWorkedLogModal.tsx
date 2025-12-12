@@ -208,7 +208,7 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
           </View>
 
           <ListHeader />
-          
+
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
@@ -222,16 +222,16 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
             >
               {entries.length > 0 ? (
                 entries.map((item) => (
-                  <ShiftLogItem 
-                    key={item.id || `${item.type}-${item.timestamp || item.createdAt}`} 
-                    item={item} 
-                    COLORS={COLORS} 
+                  <ShiftLogItem
+                    key={item.id || `${item.type}-${item.timestamp || item.createdAt}`}
+                    item={item}
+                    COLORS={COLORS}
                   />
                 ))
               ) : (
                 <View style={styles.emptyContainer}>
                   <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
-                  <Text style={styles.emptyText}>No records found</Text>
+                  <Text style={styles.emptyText}>No Records Found</Text>
                 </View>
               )}
             </ScrollView>

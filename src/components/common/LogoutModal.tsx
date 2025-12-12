@@ -97,7 +97,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onCancel, onConfirm 
                             <View style={styles.content}>
                                 <Text style={styles.title}>Logout</Text>
                                 <Text style={styles.message}>
-                                    Are you sure you want to logout?
+                                    Are You Sure You Want To Logout?
                                 </Text>
                             </View>
 

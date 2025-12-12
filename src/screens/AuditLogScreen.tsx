@@ -219,7 +219,7 @@ const AuditLogScreen = () => {
 
       <View style={styles.filterContainer}>
         <Text style={[styles.filterSectionTitle, { color: COLORS.textPrimary }]}>Filter by Date & Time</Text>
-        
+
         <View style={styles.filterRow}>
           {/* Date Section */}
           <View style={styles.dateSection}>
@@ -319,7 +319,7 @@ const AuditLogScreen = () => {
         {loading && logs.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading activity logs...</Text>
+            <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading Activity Logs...</Text>
           </View>
         ) : (
           <FlatList
@@ -333,9 +333,9 @@ const AuditLogScreen = () => {
                 <View style={[styles.emptyIconContainer, { backgroundColor: COLORS.cardBg }]}>
                   <Icon name="text-box-search-outline" size={56} color={COLORS.textTertiary} />
                 </View>
-                <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>No activity logs found</Text>
+                <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>No Activity Logs Found</Text>
                 <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>
-                  Try adjusting the date and time range
+                  Try Adjusting The Date And Time Range
                 </Text>
               </View>
             }

@@ -19,12 +19,12 @@ const SettingsScreen = () => {
   const COLORS = getColors(isDarkMode);
   const styles = createStyles(COLORS);
   const dispatch = useDispatch<AppDispatch>();
-  
+
   const { notificationsEnabled } = useSelector((state: RootState) => state.notifications);
 
   const [restaurantName, setRestaurantName] = useState('Loading...');
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  
+
   const [showStoreProfile, setShowStoreProfile] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
 
@@ -93,9 +93,9 @@ const SettingsScreen = () => {
   };
 
   const SettingItem = ({ icon, title, subtitle, hasSwitch, value, onValueChange, onPress, iconColor, iconBg, badge }: any) => (
-    <TouchableOpacity 
-      style={[styles.item, { backgroundColor: COLORS.white }]} 
-      onPress={onPress} 
+    <TouchableOpacity
+      style={[styles.item, { backgroundColor: COLORS.white }]}
+      onPress={onPress}
       disabled={hasSwitch}
       activeOpacity={0.7}
     >
@@ -116,7 +116,7 @@ const SettingsScreen = () => {
         </View>
       </View>
       {hasSwitch ? (
-        <Switch 
+        <Switch
           value={value}
           onValueChange={onValueChange}
           trackColor={{ false: COLORS.border, true: COLORS.primary }}
@@ -135,12 +135,12 @@ const SettingsScreen = () => {
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Settings</Text>
           <Text style={[styles.headerSubtitle, { color: COLORS.textSecondary }]}>
-            Manage your store preferences
+            Manage Your Store Preferences
           </Text>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -151,9 +151,9 @@ const SettingsScreen = () => {
             <Text style={[styles.sectionHeader, { color: COLORS.textPrimary }]}>General</Text>
           </View>
           <View style={styles.sectionContent}>
-            <SettingItem 
-              icon="store" 
-              title="Store Profile" 
+            <SettingItem
+              icon="store"
+              title="Store Profile"
               subtitle={restaurantName}
               iconColor={COLORS.graphGray}
               iconBg={COLORS.containerGray}
@@ -169,28 +169,28 @@ const SettingsScreen = () => {
             <Text style={[styles.sectionHeader, { color: COLORS.textPrimary }]}>Preferences</Text>
           </View>
           <View style={styles.sectionContent}>
-            <SettingItem 
-              icon="bell-outline" 
-              title="Push Notifications" 
+            <SettingItem
+              icon="bell-outline"
+              title="Push Notifications"
               subtitle={notificationsEnabled ? "On" : "Off"}
-              hasSwitch 
+              hasSwitch
               value={notificationsEnabled}
               onValueChange={handleNotificationsToggle}
               iconColor={COLORS.warning}
               iconBg={COLORS.containerGray}
             />
-            <SettingItem 
-              icon="theme-light-dark" 
-              title="Appearance" 
+            <SettingItem
+              icon="theme-light-dark"
+              title="Appearance"
               subtitle={getThemeLabel()}
               iconColor={isDarkMode ? COLORS.warning : COLORS.textSecondary}
               iconBg={COLORS.containerGray}
               onPress={() => setShowAppearance(true)}
             />
-            <SettingItem 
-              icon="translate" 
-              title="Language" 
-              subtitle="English (US)" 
+            <SettingItem
+              icon="translate"
+              title="Language"
+              subtitle="English (US)"
               iconColor={COLORS.neutralGray}
               iconBg={COLORS.containerGray}
             />
@@ -198,20 +198,20 @@ const SettingsScreen = () => {
         </View>
 
         {/* Account section removed - logout available via drawer menu */}
-        
+
         <View style={styles.versionContainer}>
           <Text style={[styles.version, { color: COLORS.textTertiary }]}>Version 1.0.0</Text>
           <Text style={[styles.buildNumber, { color: COLORS.textTertiary }]}>Build 45</Text>
         </View>
       </ScrollView>
 
-      <StoreProfileModal 
+      <StoreProfileModal
         visible={showStoreProfile}
         onClose={() => setShowStoreProfile(false)}
         settings={settings}
       />
 
-      <AppearanceModal 
+      <AppearanceModal
         visible={showAppearance}
         onClose={() => setShowAppearance(false)}
       />

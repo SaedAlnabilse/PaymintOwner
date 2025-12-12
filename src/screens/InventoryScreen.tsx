@@ -251,7 +251,7 @@ const InventoryScreen = () => {
       {loading && activeTab === 'stock' ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading inventory...</Text>
+          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading Inventory...</Text>
         </View>
       ) : activeTab === 'stock' ? (
         <FlatList
@@ -270,10 +270,10 @@ const InventoryScreen = () => {
                 />
               </View>
               <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>
-                No items found
+                No Items Found
               </Text>
               <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>
-                {searchQuery ? 'Try adjusting your search' : 'Add items to get started'}
+                {searchQuery ? 'Try Adjusting Your Search' : 'Add Items To Get Started'}
               </Text>
             </View>
           }
@@ -295,10 +295,10 @@ const InventoryScreen = () => {
                 />
               </View>
               <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>
-                All clear!
+                All Clear!
               </Text>
               <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>
-                No stock alerts at the moment
+                No Stock Alerts At The Moment
               </Text>
             </View>
           }

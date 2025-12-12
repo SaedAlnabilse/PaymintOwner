@@ -133,7 +133,7 @@ const PayInPayOutLogModal: React.FC<PayInPayOutLogModalProps> = ({
               ) : (
                 <View style={styles.emptyContainer}>
                   <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
-                  <Text style={styles.emptyText}>No records found</Text>
+                  <Text style={styles.emptyText}>No Records Found</Text>
                 </View>
               )}
             </ScrollView>

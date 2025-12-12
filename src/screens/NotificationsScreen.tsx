@@ -478,64 +478,64 @@ const NotificationsScreen = () => {
           />
         }
       >
-          {/* Cash Alert Notifications */}
-          {cashAlertNotifications.map(notification => {
-            // Parse the message to extract key information
-            const message = notification.message;
-            const surplusMatch = message.match(/surplus of ([\d,.]+ JOD)/i);
-            const deficitMatch = message.match(/deficit of ([\d,.]+ JOD)/i);
-            const startedMatch = message.match(/started.*with ([\d,.]+ JOD)/i);
-            const endedMatch = message.match(/ended with ([\d,.]+ JOD)/i);
-            
-            const alertType = surplusMatch ? 'SURPLUS' : deficitMatch ? 'DEFICIT' : 'ALERT';
-            const amount = surplusMatch?.[1] || deficitMatch?.[1] || '';
-            
-            return (
-              <View key={notification.id} style={styles.alertCard}>
-                <TouchableOpacity
-                  style={styles.alertCardContent}
-                  onPress={() => notification.stockNotification && handleStockNotificationPress(notification.stockNotification)}
-                  activeOpacity={0.9}
-                >
-                  {/* Header with Badge and Time */}
-                  <View style={styles.alertTopRow}>
-                    <View style={styles.alertBadge}>
-                      <Icon name="alert-circle" size={14} color={COLORS.orange} />
-                      <Text style={styles.alertBadgeText}>CASH {alertType}</Text>
-                    </View>
-                    <View style={styles.alertTimeContainer}>
-                      <Icon name="clock" size={12} color={COLORS.textSecondary} />
-                      <Text style={styles.alertTimeText}>{notification.time}</Text>
-                    </View>
+        {/* Cash Alert Notifications */}
+        {cashAlertNotifications.map(notification => {
+          // Parse the message to extract key information
+          const message = notification.message;
+          const surplusMatch = message.match(/surplus of ([\d,.]+ JOD)/i);
+          const deficitMatch = message.match(/deficit of ([\d,.]+ JOD)/i);
+          const startedMatch = message.match(/started.*with ([\d,.]+ JOD)/i);
+          const endedMatch = message.match(/ended with ([\d,.]+ JOD)/i);
+
+          const alertType = surplusMatch ? 'SURPLUS' : deficitMatch ? 'DEFICIT' : 'ALERT';
+          const amount = surplusMatch?.[1] || deficitMatch?.[1] || '';
+
+          return (
+            <View key={notification.id} style={styles.alertCard}>
+              <TouchableOpacity
+                style={styles.alertCardContent}
+                onPress={() => notification.stockNotification && handleStockNotificationPress(notification.stockNotification)}
+                activeOpacity={0.9}
+              >
+                {/* Header with Badge and Time */}
+                <View style={styles.alertTopRow}>
+                  <View style={styles.alertBadge}>
+                    <Icon name="alert-circle" size={14} color={COLORS.orange} />
+                    <Text style={styles.alertBadgeText}>CASH {alertType}</Text>
+                  </View>
+                  <View style={styles.alertTimeContainer}>
+                    <Icon name="clock" size={12} color={COLORS.textSecondary} />
+                    <Text style={styles.alertTimeText}>{notification.time}</Text>
+                  </View>
+                </View>
+
+                {/* Main Alert Content */}
+                <View style={styles.alertMainRow}>
+                  <View style={styles.alertIconContainer}>
+                    <Icon name="dollar-sign" size={28} color={COLORS.orange} />
                   </View>
 
-                  {/* Main Alert Content */}
-                  <View style={styles.alertMainRow}>
-                    <View style={styles.alertIconContainer}>
-                      <Icon name="dollar-sign" size={28} color={COLORS.orange} />
-                    </View>
-                    
-                    <View style={styles.alertContent}>
-                      <Text style={styles.alertTitle}>{notification.title}</Text>
-                      
-                      {/* Amount Highlight if available */}
-                      {amount && (
-                        <View style={styles.amountHighlight}>
-                          <Text style={styles.amountLabel}>
-                            {alertType === 'SURPLUS' ? 'Surplus Amount' : 'Deficit Amount'}
-                          </Text>
-                          <Text style={styles.amountValue}>{amount}</Text>
-                        </View>
-                      )}
-                      
-                      {/* Full Message */}
-                      <Text style={styles.alertMessage}>{message}</Text>
-                    </View>
+                  <View style={styles.alertContent}>
+                    <Text style={styles.alertTitle}>{notification.title}</Text>
+
+                    {/* Amount Highlight if available */}
+                    {amount && (
+                      <View style={styles.amountHighlight}>
+                        <Text style={styles.amountLabel}>
+                          {alertType === 'SURPLUS' ? 'Surplus Amount' : 'Deficit Amount'}
+                        </Text>
+                        <Text style={styles.amountValue}>{amount}</Text>
+                      </View>
+                    )}
+
+                    {/* Full Message */}
+                    <Text style={styles.alertMessage}>{message}</Text>
                   </View>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
+                </View>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
 
         {cashAlertNotifications.length === 0 && (
           <View style={styles.emptyState}>
@@ -544,7 +544,7 @@ const NotificationsScreen = () => {
             </View>
             <Text style={styles.emptyStateTitle}>No Cash Alerts</Text>
             <Text style={styles.emptyStateMessage}>
-              No cash alerts at the moment. New alerts will appear here.
+              No Cash Alerts At The Moment. New Alerts Will Appear Here.
             </Text>
           </View>
         )}

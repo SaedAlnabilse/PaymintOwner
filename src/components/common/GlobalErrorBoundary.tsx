@@ -37,9 +37,9 @@ class GlobalErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <Icon name="alert-octagon-outline" size={60} color="#D55263" />
-          <Text style={styles.title}>Oops! Something went wrong.</Text>
+          <Text style={styles.title}>Oops! Something Went Wrong.</Text>
           <Text style={styles.subtitle}>
-            An unexpected error occurred. Please try again.
+            An Unexpected Error Occurred. Please Try Again.
           </Text>
           <TouchableOpacity style={styles.button} onPress={this.handleReset}>
             <Text style={styles.buttonText}>Try Again</Text>

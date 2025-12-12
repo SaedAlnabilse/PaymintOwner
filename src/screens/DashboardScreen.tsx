@@ -36,7 +36,7 @@ const DashboardScreen = () => {
       const data = await getOwnerDashboard();
       setOwnerData(data);
       setDashboardData(data.metrics);
-      
+
       console.log(`✅ Dashboard loaded in single API call (store: ${data.storeStatus}, alerts: ${data.cashAlerts.unreadCount})`);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard');
@@ -94,8 +94,8 @@ const DashboardScreen = () => {
           <View style={[styles.errorIconContainer, { backgroundColor: COLORS.errorBg }]}>
             <Icon name="alert-circle-outline" size={56} color={COLORS.errorText} />
           </View>
-          <Text style={[styles.errorText, { color: COLORS.textPrimary }]}>Failed to load dashboard</Text>
-          <Text style={[styles.errorSubText, { color: COLORS.textSecondary }]}>{error || 'Please check your connection'}</Text>
+          <Text style={[styles.errorText, { color: COLORS.textPrimary }]}>Failed To Load Dashboard</Text>
+          <Text style={[styles.errorSubText, { color: COLORS.textSecondary }]}>{error || 'Please Check Your Connection'}</Text>
           <TouchableOpacity style={[styles.retryButton, { backgroundColor: COLORS.primary }]} onPress={loadData}>
             <Icon name="refresh" size={20} color="#FFF" />
             <Text style={styles.retryText}>Retry</Text>
@@ -175,7 +175,7 @@ const DashboardScreen = () => {
             <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
             {/* Cash Alert Badge */}
             {ownerData?.cashAlerts?.unreadCount > 0 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.alertBadge}
                 onPress={() => navigation.navigate('Notifications')}
               >
@@ -480,7 +480,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: colors.textSecondary,
   },

@@ -43,7 +43,7 @@ const StaffScreen = () => {
     try {
       // OPTIMIZED: Single API call to get all staff data
       const data = await getStaffOverview();
-      
+
       // Map the response to our StaffMember interface
       const fetchedStaff: StaffMember[] = data.staff.map(user => ({
         ...user,
@@ -237,7 +237,7 @@ const StaffScreen = () => {
           ))}
 
           {filteredStaff.filter(s => s.status === 'Clocked In').length === 0 && (
-            <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No active staff</Text>
+            <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No Active Staff</Text>
           )}
 
           <View style={[styles.sectionHeader, { marginTop: 24 }]}>
@@ -257,7 +257,7 @@ const StaffScreen = () => {
           ))}
 
           {filteredStaff.filter(s => s.status !== 'Clocked In').length === 0 && (
-            <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No offline staff</Text>
+            <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No Offline Staff</Text>
           )}
 
         </ScrollView>

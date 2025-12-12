@@ -10,7 +10,7 @@ const LogoHeader = () => {
         resizeMode="contain"
       />
       <Text style={styles.appTitle}>PayMint Owner</Text>
-      <Text style={styles.appSubtitle}>Monitor your business anywhere</Text>
+      <Text style={styles.appSubtitle}>Monitor Your Business Anywhere</Text>
     </View>
   );
 };
