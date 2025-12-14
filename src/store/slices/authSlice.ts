@@ -60,14 +60,14 @@ export const checkAuthStatus = createAsyncThunk(
       console.log('🔐 Checking authentication status...');
       const token = await authService.getToken();
       const user = await authService.getUser();
-      
+
       if (!token || !user) {
         console.log('🔐 No stored session found');
         return rejectWithValue('No stored session found');
       }
 
       console.log('🔐 Found stored session, verifying token validity...');
-      // Verify token is still valid by making a test API call
+      // Try to verify token is still valid by making a test API call
       try {
         const profileResponse = await authService.getProfile();
         console.log('🔐 Token is valid, user authenticated');
@@ -76,10 +76,23 @@ export const checkAuthStatus = createAsyncThunk(
           user: profileResponse
         };
       } catch (apiError: any) {
-        console.log('🔐 Token is invalid, clearing stored data');
-        // Token is invalid, clear stored data
-        await authService.logout();
-        return rejectWithValue('Session expired');
+        // Check if this is a 401 (unauthorized) - token is genuinely invalid
+        const status = apiError.response?.status;
+        if (status === 401) {
+          console.log('🔐 Token is invalid (401), clearing stored data');
+          await authService.logout();
+          return rejectWithValue('Session expired');
+        }
+
+        // For any other error (network, timeout, server error),
+        // KEEP the user logged in with their stored credentials
+        // The API interceptor will handle 401s if needed later
+        console.log('🔐 API check failed but not 401, keeping user logged in with stored data');
+        console.log('🔐 Error details:', apiError.message);
+        return {
+          token,
+          user
+        };
       }
     } catch (error: any) {
       console.log('🔐 Authentication check failed:', error.message);
@@ -112,14 +125,14 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         const userRole = action.payload.user?.role?.toUpperCase();
         const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER';
-        
+
         state.token = action.payload.access_token;
         state.user = action.payload.user;
         // Only authenticate if user is admin or owner
         state.isAuthenticated = isAdminOrOwner;
         state.isLoading = false;
         state.error = isAdminOrOwner ? null : 'This app is for administrators only';
-        
+
         // Clear any stored background time since user just logged in
         if (isAdminOrOwner) {
           clearBackgroundTime();

@@ -86,6 +86,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                     <Icon name="account-circle-outline" size={16} color={COLORS.textSecondary} />
                                     <Text style={styles.staffText}>Taken By: {order.employeeName || 'Unknown'}</Text>
                                 </View>
+
+                                {/* Order Note */}
+                                {order.note && (
+                                    <Text style={styles.orderNoteSimple}>Note: {order.note}</Text>
+                                )}
                             </View>
 
                             <View style={styles.divider} />
@@ -127,10 +132,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
                                 {(order.discountAmount || 0) > 0 && (
                                     <View style={styles.totalRow}>
-                                        <Text style={[styles.totalLabel, { color: theme.colors.error }]}>
+                                        <Text style={[styles.totalLabel, { color: COLORS.error || '#D55263' }]}>
                                             Discount {discountPercentage > 0 ? `(${discountPercentage}%)` : ''}
                                         </Text>
-                                        <Text style={[styles.totalValue, { color: theme.colors.error }]}>
+                                        <Text style={[styles.totalValue, { color: COLORS.error || '#D55263' }]}>
                                             -{(order.discountAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
                                         </Text>
                                     </View>
@@ -257,6 +262,38 @@ const createStyles = (colors: any) => StyleSheet.create({
         fontSize: 14,
         color: colors.textSecondary,
         fontWeight: '500'
+    },
+    orderNoteSimple: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        fontWeight: '500',
+        marginTop: 4,
+    },
+    orderNoteContainer: {
+        marginTop: 12,
+        backgroundColor: '#FEF3C7',
+        borderRadius: 10,
+        padding: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#D0C962',
+    },
+    orderNoteHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 6,
+    },
+    orderNoteTitle: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#92400E',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    orderNoteText: {
+        fontSize: 14,
+        color: '#92400E',
+        lineHeight: 20,
     },
     divider: {
         height: 1,

@@ -74,11 +74,11 @@ const ReportsScreen = () => {
   // Custom Date Controls State
   const [showCustomControls, setShowCustomControls] = useState(false);
 
-  // Date/Time Picker State
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date()); // Default start of day
-  const [endTime, setEndTime] = useState(new Date()); // Default end of day
+  // Date/Time Picker State - Initialize with Jordan timezone
+  const [startDate, setStartDate] = useState(() => moment.tz('Asia/Amman').toDate());
+  const [endDate, setEndDate] = useState(() => moment.tz('Asia/Amman').toDate());
+  const [startTime, setStartTime] = useState(() => moment.tz('Asia/Amman').startOf('day').toDate()); // Default start of day
+  const [endTime, setEndTime] = useState(() => moment.tz('Asia/Amman').endOf('day').toDate()); // Default end of day
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
