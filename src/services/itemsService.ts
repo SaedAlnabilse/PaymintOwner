@@ -9,6 +9,8 @@ export interface Item {
   isAvailable: boolean;
   trackStock: boolean;
   availableStock?: number;
+  lowStockThresholdYellow?: number;
+  lowStockThresholdRed?: number;
   imageUrl?: string;
   type?: 'ITEM' | 'ADDON' | 'item' | 'addon';
   createdAt?: string;

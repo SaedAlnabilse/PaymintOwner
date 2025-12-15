@@ -220,6 +220,41 @@ const StaffScreen = () => {
             </View>
           </View>
 
+          {/* Top Performers Leaderboard */}
+          {staffList.filter(s => s.todaySales > 0).length > 0 && (
+            <View style={[styles.leaderboardContainer, { backgroundColor: COLORS.white }]}>
+              <View style={styles.leaderboardHeader}>
+                <Icon name="trophy" size={20} color={COLORS.orange} />
+                <Text style={[styles.leaderboardTitle, { color: COLORS.textPrimary }]}>Top Performers Today</Text>
+              </View>
+              {staffList
+                .filter(s => s.todaySales > 0)
+                .sort((a, b) => b.todaySales - a.todaySales)
+                .slice(0, 3)
+                .map((staff, index) => (
+                  <View key={staff.id} style={[styles.leaderboardRow, index === 0 && styles.topPerformer]}>
+                    <View style={styles.leaderboardRank}>
+                      <Text style={[
+                        styles.leaderboardRankText,
+                        { color: index === 0 ? COLORS.orange : COLORS.textSecondary }
+                      ]}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                      </Text>
+                    </View>
+                    <View style={styles.leaderboardInfo}>
+                      <Text style={[styles.leaderboardName, { color: COLORS.textPrimary }]}>{staff.name}</Text>
+                      <Text style={[styles.leaderboardOrders, { color: COLORS.textSecondary }]}>
+                        {staff.todayOrderCount} orders
+                      </Text>
+                    </View>
+                    <Text style={[styles.leaderboardSales, { color: COLORS.primary }]}>
+                      {staff.todaySales.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
               <Icon name="account-clock" size={18} color={COLORS.primary} />
@@ -539,6 +574,68 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     marginVertical: 10,
+  },
+  // Leaderboard styles
+  leaderboardContainer: {
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  leaderboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  leaderboardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  topPerformer: {
+    backgroundColor: colors.orange + '10',
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderBottomWidth: 0,
+    marginBottom: 4,
+  },
+  leaderboardRank: {
+    width: 36,
+    alignItems: 'center',
+  },
+  leaderboardRankText: {
+    fontSize: 20,
+  },
+  leaderboardInfo: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  leaderboardName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  leaderboardOrders: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  leaderboardSales: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
 

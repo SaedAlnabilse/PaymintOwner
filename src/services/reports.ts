@@ -113,19 +113,19 @@ export const getLiveShiftReport = async (employeeId?: string): Promise<LiveShift
     const now = new Date();
     const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days ago
     const endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // Tomorrow
-    
+
     const params = new URLSearchParams({
       employeeId,
       startDate,
       endDate,
     });
-    
+
     const response = await apiClient.get(`/reports/shifts?${params.toString()}`);
     const shifts = response.data;
-    
+
     // Find an active (OPEN) shift
     const activeShift = shifts.find((shift: any) => shift.status === 'OPEN' || !shift.endTime);
-    
+
     if (activeShift) {
       return {
         type: 'CURRENT_SHIFT',
@@ -133,7 +133,7 @@ export const getLiveShiftReport = async (employeeId?: string): Promise<LiveShift
         shift: activeShift,
       };
     }
-    
+
     return { type: 'NO_SHIFT', shiftStartTime: null };
   } catch (error: any) {
     // Silently handle errors - return null shift status instead of throwing
@@ -196,4 +196,121 @@ export const fetchOrderDetails = async (
 export const fetchUserName = async (userId: string): Promise<string> => {
   const response = await apiClient.get(`/api/users/name/${userId}`);
   return response.data.name;
+};
+
+/**
+ * Get sales comparison between two periods (e.g., today vs yesterday)
+ */
+export interface SalesComparison {
+  current: {
+    totalSales: number;
+    orderCount: number;
+    averageSale: number;
+  };
+  previous: {
+    totalSales: number;
+    orderCount: number;
+    averageSale: number;
+  };
+  percentageChange: {
+    sales: number;
+    orders: number;
+    average: number;
+  };
+}
+
+export const getSalesComparison = async (
+  currentStart: string,
+  currentEnd: string,
+  previousStart: string,
+  previousEnd: string
+): Promise<SalesComparison> => {
+  try {
+    const [currentData, previousData] = await Promise.all([
+      getSalesSummary(currentStart, currentEnd),
+      getSalesSummary(previousStart, previousEnd),
+    ]);
+
+    const current = {
+      totalSales: currentData.netSales || 0,
+      orderCount: currentData.orderCount || 0,
+      averageSale: currentData.orderCount > 0 ? (currentData.netSales || 0) / currentData.orderCount : 0,
+    };
+
+    const previous = {
+      totalSales: previousData.netSales || 0,
+      orderCount: previousData.orderCount || 0,
+      averageSale: previousData.orderCount > 0 ? (previousData.netSales || 0) / previousData.orderCount : 0,
+    };
+
+    const calculateChange = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    return {
+      current,
+      previous,
+      percentageChange: {
+        sales: calculateChange(current.totalSales, previous.totalSales),
+        orders: calculateChange(current.orderCount, previous.orderCount),
+        average: calculateChange(current.averageSale, previous.averageSale),
+      },
+    };
+  } catch (error) {
+    console.error('Failed to get sales comparison:', error);
+    return {
+      current: { totalSales: 0, orderCount: 0, averageSale: 0 },
+      previous: { totalSales: 0, orderCount: 0, averageSale: 0 },
+      percentageChange: { sales: 0, orders: 0, average: 0 },
+    };
+  }
+};
+
+/**
+ * Get sales breakdown by category
+ */
+export interface CategorySales {
+  categoryName: string;
+  totalSales: number;
+  itemCount: number;
+  percentage: number;
+}
+
+export const getSalesByCategory = async (
+  startDate: string,
+  endDate: string
+): Promise<CategorySales[]> => {
+  try {
+    // Get top selling items and group by category
+    const items = await getTopSellingItems(startDate, endDate);
+
+    const categoryMap = new Map<string, { sales: number; count: number }>();
+    let totalSales = 0;
+
+    items.forEach(item => {
+      const category = item.categoryName || 'Uncategorized';
+      const existing = categoryMap.get(category) || { sales: 0, count: 0 };
+      existing.sales += item.totalRevenue || 0;
+      existing.count += item.quantitySold || 0;
+      categoryMap.set(category, existing);
+      totalSales += item.totalRevenue || 0;
+    });
+
+    const categories: CategorySales[] = [];
+    categoryMap.forEach((value, key) => {
+      categories.push({
+        categoryName: key,
+        totalSales: value.sales,
+        itemCount: value.count,
+        percentage: totalSales > 0 ? (value.sales / totalSales) * 100 : 0,
+      });
+    });
+
+    // Sort by sales descending
+    return categories.sort((a, b) => b.totalSales - a.totalSales);
+  } catch (error) {
+    console.error('Failed to get sales by category:', error);
+    return [];
+  }
 };

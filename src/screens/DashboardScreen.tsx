@@ -3,12 +3,14 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Animated, Activit
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
+import moment from 'moment-timezone';
 
 import { ScreenContainer } from '../components/ScreenContainer';
 import { RootState } from '../store/store';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { getOwnerDashboard, OwnerDashboard, DashboardSummary } from '../services/dashboard';
+import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales } from '../services/reports';
 
 const DashboardScreen = () => {
   const { isDarkMode } = useTheme();
@@ -17,8 +19,21 @@ const DashboardScreen = () => {
 
   const { user } = useSelector((state: RootState) => state.auth);
 
+  // Time period options
+  type TimePeriod = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth';
+  const periodOptions: { key: TimePeriod; label: string }[] = [
+    { key: 'today', label: 'Today' },
+    { key: 'yesterday', label: 'Yesterday' },
+    { key: 'thisWeek', label: 'This Week' },
+    { key: 'lastWeek', label: 'Last Week' },
+    { key: 'thisMonth', label: 'This Month' },
+  ];
+
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('today');
   const [ownerData, setOwnerData] = useState<OwnerDashboard | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
+  const [comparison, setComparison] = useState<SalesComparison | null>(null);
+  const [categoryData, setCategoryData] = useState<CategorySales[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,43 +41,119 @@ const DashboardScreen = () => {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
 
-  const loadData = useCallback(async () => {
+  // Get date ranges based on selected period
+  const getDateRanges = useCallback((period: TimePeriod) => {
+    const now = moment().tz('Asia/Amman');
+    let currentStart: moment.Moment;
+    let currentEnd: moment.Moment;
+    let previousStart: moment.Moment;
+    let previousEnd: moment.Moment;
+
+    switch (period) {
+      case 'yesterday':
+        currentStart = now.clone().subtract(1, 'day').startOf('day');
+        currentEnd = now.clone().subtract(1, 'day').endOf('day');
+        previousStart = now.clone().subtract(2, 'days').startOf('day');
+        previousEnd = now.clone().subtract(2, 'days').endOf('day');
+        break;
+      case 'thisWeek':
+        currentStart = now.clone().startOf('week');
+        currentEnd = now.clone().endOf('day');
+        previousStart = now.clone().subtract(1, 'week').startOf('week');
+        previousEnd = now.clone().subtract(1, 'week').endOf('week');
+        break;
+      case 'lastWeek':
+        currentStart = now.clone().subtract(1, 'week').startOf('week');
+        currentEnd = now.clone().subtract(1, 'week').endOf('week');
+        previousStart = now.clone().subtract(2, 'weeks').startOf('week');
+        previousEnd = now.clone().subtract(2, 'weeks').endOf('week');
+        break;
+      case 'thisMonth':
+        currentStart = now.clone().startOf('month');
+        currentEnd = now.clone().endOf('day');
+        previousStart = now.clone().subtract(1, 'month').startOf('month');
+        previousEnd = now.clone().subtract(1, 'month').endOf('month');
+        break;
+      default: // today
+        currentStart = now.clone().startOf('day');
+        currentEnd = now.clone().endOf('day');
+        previousStart = now.clone().subtract(1, 'day').startOf('day');
+        previousEnd = now.clone().subtract(1, 'day').endOf('day');
+    }
+
+    return {
+      currentStart: currentStart.toISOString(),
+      currentEnd: currentEnd.toISOString(),
+      previousStart: previousStart.toISOString(),
+      previousEnd: previousEnd.toISOString(),
+    };
+  }, []);
+
+  const loadData = useCallback(async (silent = false) => {
     try {
       setError(null);
-      // Don't set loading true on refresh to avoid flickering
-      if (!refreshing && !dashboardData) setLoading(true);
+      // Only show full loading overlay if explicit refresh or initial load
+      if (!silent && !refreshing) setLoading(true);
 
-      // OPTIMIZED: Single API call for all dashboard data
-      const data = await getOwnerDashboard();
-      setOwnerData(data);
-      setDashboardData(data.metrics);
+      // Get date ranges based on selected period
+      const { currentStart, currentEnd, previousStart, previousEnd } = getDateRanges(selectedPeriod);
 
-      console.log(`✅ Dashboard loaded in single API call (store: ${data.storeStatus}, alerts: ${data.cashAlerts.unreadCount})`);
+      // Fetch all data in parallel
+      const [newData, comparisonData, categories] = await Promise.all([
+        getOwnerDashboard(),
+        getSalesComparison(currentStart, currentEnd, previousStart, previousEnd),
+        getSalesByCategory(currentStart, currentEnd),
+      ]);
+
+      // Update comparison and category data
+      setComparison(comparisonData);
+      setCategoryData(categories.slice(0, 5)); // Top 5 categories
+
+      // Smart Update: Compare new data with current data to avoid unnecessary re-renders
+      // and prevent "loading" flickering if data hasn't changed.
+      // We exclude 'generatedAt' from comparison as that always changes.
+      setOwnerData(currentData => {
+        const hasChanges = !currentData ||
+          JSON.stringify({ ...newData, generatedAt: '' }) !== JSON.stringify({ ...currentData, generatedAt: '' });
+
+        if (hasChanges) {
+          console.log(`✅ Dashboard data updated (Status: ${newData.storeStatus})`);
+          setDashboardData(newData.metrics);
+          return newData;
+        } else {
+          // console.log('⚡ Dashboard data identical, skipping render');
+          return currentData;
+        }
+      });
+
     } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard');
+      if (!silent) setError(err.message || 'Failed to load dashboard');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshing, dashboardData]);
+  }, [refreshing, selectedPeriod, getDateRanges]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadData();
+    await loadData(false); // Manual refresh should show feedback eventually, but RefreshControl handles the UI here
   }, [loadData]);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      // Use silent=true on focus so the user isn't annoyed by the loading overlay
+      // unless data actually changes (which handles the update silently)
+      loadData(true);
+
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
         Animated.spring(slideAnim, { toValue: 0, tension: 20, friction: 7, useNativeDriver: true }),
       ]).start();
 
-      // Polling for live updates - reduced frequency to avoid rate limiting
+      // Polling for live updates
       const intervalId = setInterval(() => {
-        loadData();
-      }, 15000); // Fetch every 15 seconds (reduced from 5 to avoid 429 errors)
+        loadData(true); // Silent update
+      }, 15000);
 
       return () => {
         clearInterval(intervalId);
@@ -96,7 +187,7 @@ const DashboardScreen = () => {
           </View>
           <Text style={[styles.errorText, { color: COLORS.textPrimary }]}>Failed To Load Dashboard</Text>
           <Text style={[styles.errorSubText, { color: COLORS.textSecondary }]}>{error || 'Please Check Your Connection'}</Text>
-          <TouchableOpacity style={[styles.retryButton, { backgroundColor: COLORS.primary }]} onPress={loadData}>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: COLORS.primary }]} onPress={() => loadData()}>
             <Icon name="refresh" size={20} color="#FFF" />
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
@@ -132,141 +223,292 @@ const DashboardScreen = () => {
     totalPayOut: 0
   });
 
+  /* Loading Overlay Component */
+  const LoadingOverlay = () => (
+    <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }]} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={[
+          styles.loadingCard,
+          { backgroundColor: isDarkMode ? COLORS.surface : '#FFFFFF' }
+        ]}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={[styles.loadingText, { color: COLORS.textPrimary }]}>Updating Dashboard...</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <ScreenContainer style={{ backgroundColor: COLORS.background }}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>
-            Hello, {user?.name?.split(' ')[0] || 'Owner'} 👋
-          </Text>
-          <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Dashboard</Text>
+      {/* Show overlay when loading AND we passed the initial load (so dashboardData exists) */}
+      {(loading && dashboardData && !refreshing) && <LoadingOverlay />}
+
+      {/* Show full screen loading only on initial load */}
+      {(loading && !dashboardData) && (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading Dashboard...</Text>
         </View>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={[styles.menuButton, { backgroundColor: COLORS.containerGray }]}
-        >
-          <Icon name="refresh" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
+      )}
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-      >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-
-          {/* Featured Sales Card with Store Status */}
-          <View style={styles.featuredCard}>
-            <View style={styles.featuredCardHeader}>
-              <Text style={styles.featuredCardLabel}>Today's Sales</Text>
-              {(ownerData?.storeStatus === 'OPEN' || dashboardData?.shiftStatus === 'ACTIVE') ? (
-                <View style={styles.statusIndicator}>
-                  <View style={[styles.statusDot, { backgroundColor: '#FFFFFF' }]} />
-                  <Text style={styles.statusIndicatorText}>Store Open</Text>
-                </View>
-              ) : (
-                <View style={styles.statusIndicator}>
-                  <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
-                  <Text style={styles.statusIndicatorText}>Store Closed</Text>
-                </View>
-              )}
+      {(!loading && !dashboardData && error) ? (
+        <View style={styles.centerContainer}>
+          <View style={[styles.errorIconContainer, { backgroundColor: COLORS.errorBg }]}>
+            <Icon name="alert-circle-outline" size={56} color={COLORS.errorText} />
+          </View>
+          <Text style={[styles.errorText, { color: COLORS.textPrimary }]}>Failed To Load Dashboard</Text>
+          <Text style={[styles.errorSubText, { color: COLORS.textSecondary }]}>{error || 'Please Check Your Connection'}</Text>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: COLORS.primary }]} onPress={() => loadData(false)}>
+            <Icon name="refresh" size={20} color="#FFF" />
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>
+                Hello, {user?.name?.split(' ')[0] || 'Owner'} 👋
+              </Text>
+              <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Dashboard</Text>
             </View>
-            <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
-            {/* Cash Alert Badge */}
-            {ownerData?.cashAlerts?.unreadCount > 0 && (
+            <TouchableOpacity
+              onPress={onRefresh}
+              style={[styles.menuButton, { backgroundColor: COLORS.containerGray }]}
+            >
+              <Icon name="refresh" size={24} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Time Period Selector */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.periodSelector}
+            contentContainerStyle={styles.periodSelectorContent}
+          >
+            {periodOptions.map((option) => (
               <TouchableOpacity
-                style={styles.alertBadge}
-                onPress={() => navigation.navigate('Notifications')}
+                key={option.key}
+                style={[
+                  styles.periodChip,
+                  {
+                    backgroundColor: selectedPeriod === option.key ? COLORS.primary : COLORS.surface,
+                    borderColor: selectedPeriod === option.key ? COLORS.primary : COLORS.borderLight,
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedPeriod(option.key);
+                  loadData(false);
+                }}
               >
-                <Icon name="alert-circle" size={16} color="#FFF" />
-                <Text style={styles.alertBadgeText}>
-                  {ownerData.cashAlerts.unreadCount} Cash Alert{ownerData.cashAlerts.unreadCount > 1 ? 's' : ''}
+                <Text style={[
+                  styles.periodChipText,
+                  { color: selectedPeriod === option.key ? '#FFF' : COLORS.textSecondary }
+                ]}>
+                  {option.label}
                 </Text>
               </TouchableOpacity>
-            )}
-          </View>
+            ))}
+          </ScrollView>
 
-          {/* Metrics Grid */}
-          <View style={styles.statsGrid}>
-            <MetricCard
-              title="Orders"
-              value={metrics.orderCount}
-              icon="receipt"
-              color={COLORS.neutralGray}
-            />
-            <MetricCard
-              title="Cash"
-              value={formatCurrency(metrics.cashSales)}
-              icon="cash"
-              color={COLORS.primary}
-            />
-            <MetricCard
-              title="Card"
-              value={formatCurrency(metrics.cardSales)}
-              icon="credit-card"
-              color={COLORS.graphGray}
-            />
-            <MetricCard
-              title="Average"
-              value={formatCurrency(metrics.orderCount > 0 ? metrics.totalSales / metrics.orderCount : 0)}
-              icon="chart-line"
-              color={COLORS.alertYellow}
-            />
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+          >
+            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+              {/* Featured Sales Card with Store Status */}
+              <View style={styles.featuredCard}>
+                <View style={styles.featuredCardHeader}>
+                  <Text style={styles.featuredCardLabel}>
+                    {periodOptions.find(p => p.key === selectedPeriod)?.label || 'Today'}'s Sales
+                  </Text>
+                  {(ownerData?.storeStatus === 'OPEN' || dashboardData?.shiftStatus === 'ACTIVE') ? (
+                    <View style={styles.statusIndicator}>
+                      <View style={[styles.statusDot, { backgroundColor: '#FFFFFF' }]} />
+                      <Text style={styles.statusIndicatorText}>Store Open</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.statusIndicator}>
+                      <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
+                      <Text style={styles.statusIndicatorText}>Store Closed</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Icon name="lightning-bolt" size={20} color={COLORS.alertYellow} />
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-            </View>
-            <View style={styles.actionGrid}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Reports')}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(148, 163, 184, 0.15)' : COLORS.containerGray }]}>
-                  <Icon name="chart-box" size={28} color={COLORS.graphGray} />
-                </View>
-                <Text style={styles.actionText}>Reports</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Inventory')}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : COLORS.containerGray }]}>
-                  <Icon name="package-variant" size={28} color={COLORS.alertYellow} />
-                </View>
-                <Text style={styles.actionText}>Inventory</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Staff')}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(168, 187, 191, 0.15)' : COLORS.containerGray }]}>
-                  <Icon name="account-group" size={28} color={COLORS.neutralGray} />
-                </View>
-                <Text style={styles.actionText}>Staff</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Settings')}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(176, 179, 184, 0.15)' : COLORS.containerGray }]}>
-                  <Icon name="cog" size={28} color={COLORS.textSecondary} />
-                </View>
-                <Text style={styles.actionText}>Settings</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                {(ownerData?.cashAlerts?.unreadCount ?? 0) > 0 && (
+                  <TouchableOpacity
+                    style={styles.alertBadge}
+                    onPress={() => navigation.navigate('Notifications')}
+                  >
+                    <Icon name="alert-circle" size={16} color="#FFF" />
+                    <Text style={styles.alertBadgeText}>
+                      {ownerData?.cashAlerts?.unreadCount ?? 0} Cash Alert{(ownerData?.cashAlerts?.unreadCount ?? 0) > 1 ? 's' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-        </Animated.View>
-      </ScrollView>
+              {/* Metrics Grid with Comparison */}
+              <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { borderLeftColor: COLORS.neutralGray }]}>
+                  <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(148, 163, 184, 0.15)' : COLORS.containerGray }]}>
+                    <Icon name="receipt" size={24} color={COLORS.neutralGray} />
+                  </View>
+                  <Text style={styles.statLabel}>Receipts</Text>
+                  <Text style={styles.statValue}>{metrics.orderCount}</Text>
+                  {comparison && (
+                    <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.orders >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
+                      <Icon
+                        name={comparison.percentageChange.orders >= 0 ? 'arrow-up' : 'arrow-down'}
+                        size={12}
+                        color={comparison.percentageChange.orders >= 0 ? COLORS.primary : COLORS.error}
+                      />
+                      <Text style={[styles.comparisonText, { color: comparison.percentageChange.orders >= 0 ? COLORS.primary : COLORS.error }]}>
+                        {Math.abs(comparison.percentageChange.orders).toFixed(0)}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.statCard, { borderLeftColor: COLORS.primary }]}>
+                  <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(124, 195, 159, 0.15)' : COLORS.containerGray }]}>
+                    <Icon name="cash-multiple" size={24} color={COLORS.primary} />
+                  </View>
+                  <Text style={styles.statLabel}>Net Sales</Text>
+                  <Text style={styles.statValue}>{formatCurrency(metrics.totalSales)}</Text>
+                  {comparison && (
+                    <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.sales >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
+                      <Icon
+                        name={comparison.percentageChange.sales >= 0 ? 'arrow-up' : 'arrow-down'}
+                        size={12}
+                        color={comparison.percentageChange.sales >= 0 ? COLORS.primary : COLORS.error}
+                      />
+                      <Text style={[styles.comparisonText, { color: comparison.percentageChange.sales >= 0 ? COLORS.primary : COLORS.error }]}>
+                        {Math.abs(comparison.percentageChange.sales).toFixed(0)}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.statCard, { borderLeftColor: COLORS.alertYellow }]}>
+                  <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : COLORS.containerGray }]}>
+                    <Icon name="chart-line" size={24} color={COLORS.alertYellow} />
+                  </View>
+                  <Text style={styles.statLabel}>Average Sale</Text>
+                  <Text style={styles.statValue}>{formatCurrency(metrics.orderCount > 0 ? metrics.totalSales / metrics.orderCount : 0)}</Text>
+                  {comparison && (
+                    <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.average >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
+                      <Icon
+                        name={comparison.percentageChange.average >= 0 ? 'arrow-up' : 'arrow-down'}
+                        size={12}
+                        color={comparison.percentageChange.average >= 0 ? COLORS.primary : COLORS.error}
+                      />
+                      <Text style={[styles.comparisonText, { color: comparison.percentageChange.average >= 0 ? COLORS.primary : COLORS.error }]}>
+                        {Math.abs(comparison.percentageChange.average).toFixed(0)}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.statCard, { borderLeftColor: COLORS.graphGray }]}>
+                  <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(148, 163, 184, 0.15)' : COLORS.containerGray }]}>
+                    <Icon name="credit-card" size={24} color={COLORS.graphGray} />
+                  </View>
+                  <Text style={styles.statLabel}>Card Sales</Text>
+                  <Text style={styles.statValue}>{formatCurrency(metrics.cardSales)}</Text>
+                </View>
+              </View>
+
+              {/* Sales by Category */}
+              {categoryData.length > 0 && (
+                <View style={[styles.section, { marginBottom: 24 }]}>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="chart-pie" size={20} color={COLORS.primary} />
+                    <Text style={styles.sectionTitle}>Sales by Category</Text>
+                  </View>
+                  {categoryData.map((category, index) => (
+                    <View key={category.categoryName} style={styles.categoryRow}>
+                      <View style={styles.categoryInfo}>
+                        <Text style={[styles.categoryName, { color: COLORS.textPrimary }]}>{category.categoryName}</Text>
+                        <Text style={[styles.categoryAmount, { color: COLORS.textSecondary }]}>{formatCurrency(category.totalSales)}</Text>
+                      </View>
+                      <View style={styles.categoryBarContainer}>
+                        <View
+                          style={[
+                            styles.categoryBar,
+                            {
+                              width: `${Math.min(category.percentage, 100)}%`,
+                              backgroundColor: COLORS.primary + (index === 0 ? '' : (50 - index * 10).toString(16).padStart(2, '0'))
+                            }
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.categoryPercentage, { color: COLORS.textSecondary }]}>
+                        {category.percentage.toFixed(0)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Quick Actions */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="lightning-bolt" size={20} color={COLORS.alertYellow} />
+                  <Text style={styles.sectionTitle}>Quick Actions</Text>
+                </View>
+                <View style={styles.actionGrid}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('Reports')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(148, 163, 184, 0.15)' : COLORS.containerGray }]}>
+                      <Icon name="chart-box" size={28} color={COLORS.graphGray} />
+                    </View>
+                    <Text style={styles.actionText}>Reports</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('Inventory')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : COLORS.containerGray }]}>
+                      <Icon name="package-variant" size={28} color={COLORS.alertYellow} />
+                    </View>
+                    <Text style={styles.actionText}>Inventory</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('Staff')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(168, 187, 191, 0.15)' : COLORS.containerGray }]}>
+                      <Icon name="account-group" size={28} color={COLORS.neutralGray} />
+                    </View>
+                    <Text style={styles.actionText}>Staff</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('Settings')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(176, 179, 184, 0.15)' : COLORS.containerGray }]}>
+                      <Icon name="cog" size={28} color={COLORS.textSecondary} />
+                    </View>
+                    <Text style={styles.actionText}>Settings</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+            </Animated.View>
+          </ScrollView>
+        </>
+      )}
     </ScreenContainer>
   );
 };
@@ -328,6 +570,18 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  loadingCard: {
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+    minWidth: 180,
   },
   header: {
     flexDirection: 'row',
@@ -539,6 +793,83 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.1,
     color: colors.textPrimary,
+  },
+  // Comparison Badge Styles
+  comparisonBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  comparisonText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  // Category Section Styles
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  categoryInfo: {
+    width: 100,
+  },
+  categoryName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  categoryAmount: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  categoryBarContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: colors.containerGray,
+    borderRadius: 4,
+    marginHorizontal: 12,
+    overflow: 'hidden',
+  },
+  categoryBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  categoryPercentage: {
+    width: 35,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  // Period Selector Styles
+  periodSelector: {
+    // marginHorizontal: 20, // Removed to allow full-bleed scrolling
+    marginTop: 12,
+    marginBottom: 12,
+    flexGrow: 0,
+  },
+  periodSelectorContent: {
+    gap: 8,
+    paddingHorizontal: 20, // Added padding to align content with other elements
+    paddingVertical: 4,
+  },
+  periodChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 32, // Adjusted for a sleeker look
+  },
+  periodChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
 

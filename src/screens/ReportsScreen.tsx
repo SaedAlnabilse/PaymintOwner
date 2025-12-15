@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -118,6 +118,36 @@ const ReportsScreen = () => {
   const [selectedRange, setSelectedRange] = useState<'today' | 'last7' | 'last30' | 'thisMonth' | 'custom'>('today');
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [selectedShift, setSelectedShift] = useState<string | null>(null);
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'sales' | 'refunds' | 'void'>('all');
+
+  // Filter orders by type (All/Sales/Refunds/Void)
+  const filteredOrders = useMemo(() => {
+    switch (orderTypeFilter) {
+      case 'sales':
+        return orders.filter(order =>
+          order.status === 'COMPLETED' && !order.isRefunded
+        );
+      case 'refunds':
+        return orders.filter(order =>
+          order.isRefunded || order.status === 'REFUNDED'
+        );
+      case 'void':
+        // For void, we fall back to checking if total is 0 or negative
+        return orders.filter(order =>
+          (order as any).status === 'VOIDED' || (order as any).status === 'CANCELLED' || order.total === 0
+        );
+      default:
+        return orders;
+    }
+  }, [orders, orderTypeFilter]);
+
+  // Order type counts for badges
+  const orderTypeCounts = useMemo(() => ({
+    all: orders.length,
+    sales: orders.filter(o => o.status === 'COMPLETED' && !o.isRefunded).length,
+    refunds: orders.filter(o => o.isRefunded || o.status === 'REFUNDED').length,
+    void: orders.filter(o => (o as any).status === 'VOIDED' || (o as any).status === 'CANCELLED' || o.total === 0).length,
+  }), [orders]);
 
   // Dropdown State
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
@@ -814,21 +844,64 @@ const ReportsScreen = () => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <MaterialIcon name="receipt" size={24} color={COLORS.darkNavy} />
-                <Text style={styles.sectionTitle}>Recent Orders</Text>
+                <Text style={styles.sectionTitle}>Orders & Receipts</Text>
               </View>
               <View style={styles.sectionBadge}>
-                <Text style={styles.sectionBadgeText}>{orders.length} Orders</Text>
+                <Text style={styles.sectionBadgeText}>{filteredOrders.length} Orders</Text>
               </View>
             </View>
 
-            {orders.length > 0 ? (
+            {/* Order Type Filter Tabs */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.orderTypeTabs}
+              contentContainerStyle={styles.orderTypeTabsContent}
+            >
+              {[
+                { key: 'all', label: 'All', count: orderTypeCounts.all },
+                { key: 'sales', label: 'Sales', count: orderTypeCounts.sales },
+                { key: 'refunds', label: 'Refunds', count: orderTypeCounts.refunds },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.orderTypeTab,
+                    orderTypeFilter === tab.key && styles.orderTypeTabActive
+                  ]}
+                  onPress={() => setOrderTypeFilter(tab.key as any)}
+                >
+                  <Text style={[
+                    styles.orderTypeTabText,
+                    orderTypeFilter === tab.key && styles.orderTypeTabTextActive
+                  ]}>
+                    {tab.label}
+                  </Text>
+                  {tab.count > 0 && (
+                    <View style={[
+                      styles.orderTypeTabBadge,
+                      orderTypeFilter === tab.key && styles.orderTypeTabBadgeActive
+                    ]}>
+                      <Text style={[
+                        styles.orderTypeTabBadgeText,
+                        orderTypeFilter === tab.key && styles.orderTypeTabBadgeTextActive
+                      ]}>
+                        {tab.count}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {filteredOrders.length > 0 ? (
               <View style={{ maxHeight: 400 }}>
                 <ScrollView
                   nestedScrollEnabled={true}
                   showsVerticalScrollIndicator={true}
                   contentContainerStyle={styles.ordersList}
                 >
-                  {orders.map((order) => (
+                  {filteredOrders.map((order) => (
                     <TouchableOpacity
                       key={order.id}
                       style={styles.orderRow}
@@ -1421,7 +1494,60 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textPrimary,
     minWidth: 70,
     textAlign: 'right'
-  }
+  },
+  // Order Type Filter Tabs
+  orderTypeTabs: {
+    marginBottom: 16,
+    flexGrow: 0,
+  },
+  orderTypeTabsContent: {
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+  },
+  orderTypeTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8, // Slightly more gap for badge
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 100, // Fully rounded
+    backgroundColor: colors.containerGray,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    minHeight: 32,
+  },
+  orderTypeTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  orderTypeTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  orderTypeTabTextActive: {
+    color: '#FFFFFF',
+  },
+  orderTypeTabBadge: {
+    backgroundColor: colors.borderLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  orderTypeTabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  orderTypeTabBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  orderTypeTabBadgeTextActive: {
+    color: '#FFFFFF',
+  },
 });
 
 export default ReportsScreen;

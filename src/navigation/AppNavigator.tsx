@@ -108,6 +108,26 @@ const DrawerNavigator = () => {
         }}
       />
       <Drawer.Screen
+        name="Customers"
+        component={CustomersScreen}
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="account-heart-outline" size={22} color={color} />
+          ),
+          title: 'Customers & Loyalty'
+        }}
+      />
+      <Drawer.Screen
+        name="Discounts"
+        component={PromotionsScreen}
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="tag-outline" size={22} color={color} />
+          ),
+          title: 'Discounts'
+        }}
+      />
+      <Drawer.Screen
         name="AuditLog"
         component={AuditLogScreen}
         options={{

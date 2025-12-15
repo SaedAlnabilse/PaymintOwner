@@ -34,6 +34,34 @@ const InventoryScreen = () => {
     );
   }, [notifications]);
 
+  // Stock summary calculations
+  const stockSummary = useMemo(() => {
+    const tracked = items.filter(item => item.trackStock);
+
+    const outOfStock = tracked.filter(item => (item.availableStock || 0) <= 0);
+
+    const lowStock = tracked.filter(item => {
+      const stock = item.availableStock || 0;
+      const threshold = item.lowStockThresholdYellow || 5;
+      return stock > 0 && stock <= threshold;
+    });
+
+    const healthyStock = tracked.filter(item => {
+      const stock = item.availableStock || 0;
+      const threshold = item.lowStockThresholdYellow || 5;
+      return stock > threshold;
+    });
+
+    return {
+      total: items.length,
+      tracked: tracked.length,
+      outOfStock: outOfStock.length,
+      lowStock: lowStock.length,
+      healthy: healthyStock.length,
+      unlimited: items.length - tracked.length,
+    };
+  }, [items]);
+
   useEffect(() => {
     loadItems();
     // Fetch notifications to get stock alerts
@@ -58,9 +86,17 @@ const InventoryScreen = () => {
 
   const getStockStatus = (item: Item) => {
     if (!item.trackStock) return { label: 'Unlimited', color: COLORS.primary, bg: COLORS.successBg, icon: 'infinity' };
+
     const stock = item.availableStock || 0;
-    if (stock === 0) return { label: 'Out of Stock', color: COLORS.error, bg: COLORS.errorBg, icon: 'alert-circle' };
-    if (stock < 5) return { label: `Low: ${stock}`, color: COLORS.warning, bg: COLORS.warningBg, icon: 'alert' };
+    const lowThreshold = item.lowStockThresholdYellow || 5;
+
+    if (stock <= 0) {
+      const label = stock === 0 ? 'Out of Stock' : `Oversold: ${stock}`;
+      return { label, color: COLORS.error, bg: COLORS.errorBg, icon: 'alert-circle' };
+    }
+
+    if (stock <= lowThreshold) return { label: `Low: ${stock}`, color: COLORS.warning, bg: COLORS.warningBg, icon: 'alert' };
+
     return { label: `${stock} in stock`, color: COLORS.primary, bg: COLORS.successBg, icon: 'check-circle' };
   };
 
@@ -160,6 +196,25 @@ const InventoryScreen = () => {
           >
             <Icon name="refresh" size={20} color={COLORS.primary} />
           </TouchableOpacity>
+        </View>
+
+        {/* Stock Summary Cards */}
+        <View style={styles.stockSummaryRow}>
+          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.successBg }]}>
+            <Icon name="check-circle" size={20} color={COLORS.primary} />
+            <Text style={[styles.stockSummaryValue, { color: COLORS.primary }]}>{stockSummary.healthy}</Text>
+            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>In Stock</Text>
+          </View>
+          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.warningBg }]}>
+            <Icon name="alert" size={20} color={COLORS.warning} />
+            <Text style={[styles.stockSummaryValue, { color: COLORS.warning }]}>{stockSummary.lowStock}</Text>
+            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>Low Stock</Text>
+          </View>
+          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.errorBg }]}>
+            <Icon name="alert-circle" size={20} color={COLORS.error} />
+            <Text style={[styles.stockSummaryValue, { color: COLORS.error }]}>{stockSummary.outOfStock}</Text>
+            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>Out of Stock</Text>
+          </View>
         </View>
 
         <View style={styles.tabs}>
@@ -330,6 +385,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
+  },
+  stockSummaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  stockSummaryCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  stockSummaryValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  stockSummaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
   },
   headerTitle: {
     fontSize: 28,
