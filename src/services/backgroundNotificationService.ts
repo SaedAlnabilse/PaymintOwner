@@ -1,6 +1,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { apiClient } from './apiClient';
 import { pushNotificationService } from './pushNotificationService';
+import { authService } from './authService';
 
 class BackgroundNotificationService {
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -13,6 +14,13 @@ class BackgroundNotificationService {
     if (this.isInitialized) return;
 
     console.log('🔄 [Background] Initializing background notification service');
+
+    // Check if user is authenticated before initializing
+    const isAuthenticated = await authService.isAuthenticated();
+    if (!isAuthenticated) {
+      console.log('User not authenticated - skipping background service initialization');
+      return;
+    }
 
     // Listen to app state changes
     this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
@@ -34,10 +42,10 @@ class BackgroundNotificationService {
     if (nextAppState === 'background' || nextAppState === 'inactive') {
       // App went to background - keep polling fast to ensure notifications are received
       // Note: On some devices, the OS may throttle this after a while.
-      this.startBackgroundPolling(5000); 
+      this.startBackgroundPolling(5000);
     } else if (nextAppState === 'active') {
       // App became active - polling every 3 seconds
-      this.startBackgroundPolling(3000); 
+      this.startBackgroundPolling(3000);
     }
   };
 
@@ -77,15 +85,15 @@ class BackgroundNotificationService {
 
       if (newAlerts.length > 0) {
         console.log(`🔔 [Background] Found ${newAlerts.length} new cash alerts`);
-        
+
         // Show notifications for new alerts
         for (const alert of newAlerts) {
           console.log(`📢 [Background] Showing notification for: ${alert.title}`);
           await pushNotificationService.showCashAlert(
             alert.title,
             alert.message,
-            { 
-              notificationId: alert.id, 
+            {
+              notificationId: alert.id,
               type: 'CASH_ALERT',
               isBackground: true,
             }
@@ -108,7 +116,7 @@ class BackgroundNotificationService {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    
+
     if (this.appStateSubscription) {
       this.appStateSubscription.remove();
       this.appStateSubscription = null;

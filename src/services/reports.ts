@@ -232,15 +232,15 @@ export const getSalesComparison = async (
     ]);
 
     const current = {
-      totalSales: currentData.netSales || 0,
-      orderCount: currentData.orderCount || 0,
-      averageSale: currentData.orderCount > 0 ? (currentData.netSales || 0) / currentData.orderCount : 0,
+      totalSales: currentData.totalNetSales || 0,
+      orderCount: currentData.totalOrders || 0,
+      averageSale: currentData.totalOrders > 0 ? (currentData.totalNetSales || 0) / currentData.totalOrders : 0,
     };
 
     const previous = {
-      totalSales: previousData.netSales || 0,
-      orderCount: previousData.orderCount || 0,
-      averageSale: previousData.orderCount > 0 ? (previousData.netSales || 0) / previousData.orderCount : 0,
+      totalSales: previousData.totalNetSales || 0,
+      orderCount: previousData.totalOrders || 0,
+      averageSale: previousData.totalOrders > 0 ? (previousData.totalNetSales || 0) / previousData.totalOrders : 0,
     };
 
     const calculateChange = (current: number, previous: number): number => {
@@ -267,6 +267,9 @@ export const getSalesComparison = async (
   }
 };
 
+// Import items service to resolve category names
+import { itemsService } from './itemsService';
+
 /**
  * Get sales breakdown by category
  */
@@ -282,17 +285,55 @@ export const getSalesByCategory = async (
   endDate: string
 ): Promise<CategorySales[]> => {
   try {
-    // Get top selling items and group by category
-    const items = await getTopSellingItems(startDate, endDate);
+    // 1. Get top selling items
+    const topItems = await getTopSellingItems(startDate, endDate);
+
+    // 2. Fetch all items (to look up category names from item definitions if needed)
+    // Note: Ideally, the backend should return category names in top-selling-items.
+    // However, if it returns category IDs or null, we might need to map them manually
+    // or rely on what's returned.
+    //
+    // Let's inspect what topItems actually has. If `categoryName` is missing,
+    // we might need to fetch item details.
+
+    // For robust solution: fetch full item list to map IDs -> Categories if backend fails us
+    const allItems = await itemsService.getAll();
+    const itemMap = new Map(allItems.map(i => [i.id, i]));
+
+    // We also need categories... but typically item.category.name or similar is needed.
+    // Since itemsService returns Item which has categoryId, we would need categories too.
+    // Let's try to assume the backend *should* return categoryName.
+    // If "Uncategorized" is showing, it means `item.categoryName` is undefined/null.
+    // Let's try to recover it from the item definition if possible.
+
+    // Fetch categories to map ID -> Name
+    const categoriesResponse = await apiClient.get('/api/categories');
+    const categoriesList = categoriesResponse.data || [];
+    const categoryNameMap = new Map(categoriesList.map((c: any) => [c.id, c.name]));
 
     const categoryMap = new Map<string, { sales: number; count: number }>();
     let totalSales = 0;
 
-    items.forEach(item => {
-      const category = item.categoryName || 'Uncategorized';
+    topItems.forEach(item => {
+      // Logic to resolve category name:
+      // 1. Try `categoryName` from the report response
+      // 2. If valid item ID, look up item -> categoryId -> categoryName
+      // 3. Fallback to 'Uncategorized'
+
+      let resolvedCategoryName = (item as any).categoryName;
+
+      if (!resolvedCategoryName || resolvedCategoryName === 'Uncategorized') {
+        const fullItem = itemMap.get(item.itemId);
+        if (fullItem && fullItem.categoryId) {
+          resolvedCategoryName = categoryNameMap.get(fullItem.categoryId);
+        }
+      }
+
+      const category = resolvedCategoryName || 'Uncategorized';
+
       const existing = categoryMap.get(category) || { sales: 0, count: 0 };
       existing.sales += item.totalRevenue || 0;
-      existing.count += item.quantitySold || 0;
+      existing.count += item.totalQuantitySold || 0;
       categoryMap.set(category, existing);
       totalSales += item.totalRevenue || 0;
     });
@@ -312,5 +353,52 @@ export const getSalesByCategory = async (
   } catch (error) {
     console.error('Failed to get sales by category:', error);
     return [];
+  }
+};
+
+/**
+ * Get hourly sales breakdown for chart visualization
+ */
+export interface HourlySales {
+  hour: number;
+  sales: number;
+  orderCount: number;
+}
+
+export const getHourlySales = async (
+  startDate: string,
+  endDate: string
+): Promise<HourlySales[]> => {
+  try {
+    // Fetch orders for the date range
+    const orders = await fetchOrdersHistory(startDate, endDate, {
+      page: 1,
+      limit: 500,
+      status: 'COMPLETED',
+    });
+
+    // Initialize hourly buckets
+    const hourlyData: HourlySales[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyData.push({ hour, sales: 0, orderCount: 0 });
+    }
+
+    // Aggregate orders by hour
+    orders.forEach(order => {
+      if (!order.isRefunded && order.status === 'COMPLETED') {
+        const orderDate = new Date(order.createdAt);
+        const hour = orderDate.getHours();
+        if (hour >= 0 && hour < 24) {
+          hourlyData[hour].sales += Math.abs(order.total || 0);
+          hourlyData[hour].orderCount += 1;
+        }
+      }
+    });
+
+    return hourlyData;
+  } catch (error) {
+    console.error('Failed to get hourly sales:', error);
+    // Return empty hourly data
+    return Array.from({ length: 24 }, (_, hour) => ({ hour, sales: 0, orderCount: 0 }));
   }
 };

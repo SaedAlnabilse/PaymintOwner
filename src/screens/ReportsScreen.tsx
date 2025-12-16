@@ -70,6 +70,7 @@ const ReportsScreen = () => {
   const [liveShiftData, setLiveShiftData] = useState<LiveShiftReport | null>(null);
   const [totalTimeWorked, setTotalTimeWorked] = useState('0h 0m');
   const [refreshing, setRefreshing] = useState(false);
+  const [reportType, setReportType] = useState<'overview' | 'items' | 'employees' | 'receipts'>('overview');
 
   // Custom Date Controls State
   const [showCustomControls, setShowCustomControls] = useState(false);
@@ -93,6 +94,21 @@ const ReportsScreen = () => {
       setTimeValidationError(result.message);
     },
   });
+
+  // Calculate employee stats from orders
+  const employeeStats = useMemo(() => {
+    const stats = new Map<string, { name: string; count: number; total: number }>();
+    if (orders) {
+      orders.forEach(order => {
+        const empName = order.employeeName || 'Unknown';
+        const current = stats.get(empName) || { name: empName, count: 0, total: 0 };
+        current.count += 1;
+        current.total += order.total;
+        stats.set(empName, current);
+      });
+    }
+    return Array.from(stats.values()).sort((a, b) => b.total - a.total);
+  }, [orders]);
 
   // Helper function to combine date and time
   const combineDateAndTime = (date: Date, time: Date): Date => {
@@ -736,271 +752,425 @@ const ReportsScreen = () => {
         onCancel={() => setShowEndTimePicker(false)}
       />
 
+      {/* Report Type Tabs */}
+      <View style={styles.tabContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabContent}>
+          {[
+            { id: 'overview', label: 'Overview', icon: 'dashboard' },
+            { id: 'items', label: 'Sales by Item', icon: 'shopping-basket' },
+            { id: 'employees', label: 'Sales by Employee', icon: 'people' },
+            { id: 'receipts', label: 'Receipts', icon: 'receipt' },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tab,
+                reportType === tab.id && styles.tabActive,
+                { backgroundColor: reportType === tab.id ? COLORS.primary : COLORS.surface }
+              ]}
+              onPress={() => setReportType(tab.id as any)}
+            >
+              <MaterialIcon
+                name={tab.icon}
+                size={18}
+                color={reportType === tab.id ? '#FFF' : COLORS.textSecondary}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[
+                styles.tabText,
+                reportType === tab.id && styles.tabTextActive,
+                { color: reportType === tab.id ? '#FFF' : COLORS.textSecondary }
+              ]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.green} />}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        {reportType === 'overview' && (
+          <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
-          {/* Featured Net Sales Card */}
-          <View style={styles.featuredCard}>
-            <View style={styles.featuredCardHeader}>
-              <Text style={styles.featuredCardLabel}>Total Net Sales</Text>
-              <View style={styles.statusIndicator}>
-                <Icon name="trending-up" size={16} color="#FFFFFF" />
-                <Text style={styles.statusIndicatorText}>Performance</Text>
+            {/* Featured Net Sales Card */}
+            <View style={styles.featuredCard}>
+              <View style={styles.featuredCardHeader}>
+                <Text style={styles.featuredCardLabel}>Total Net Sales</Text>
+                <View style={styles.statusIndicator}>
+                  <Icon name="trending-up" size={16} color="#FFFFFF" />
+                  <Text style={styles.statusIndicatorText}>Performance</Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.featuredCardValue}>{formatCurrency(summary?.totalNetSales ?? 0)}</Text>
-          </View>
-
-          {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            {/* Card Sales */}
-            <View style={[styles.statCard, { borderLeftColor: COLORS.purpleGray }]}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                <MaterialIcon name="credit-card" size={20} color={COLORS.purpleGray} />
-              </View>
-              <Text style={styles.statLabel}>Card Sales</Text>
-              <Text style={styles.statValue}>{formatCurrency(summary?.totalCardSales ?? 0)}</Text>
+              <Text style={styles.featuredCardValue}>{formatCurrency(summary?.totalNetSales ?? 0)}</Text>
             </View>
 
-            {/* Cash Sales */}
-            <View style={[styles.statCard, { borderLeftColor: COLORS.green }]}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                <MaterialCommunityIcon name="cash" size={20} color={COLORS.green} />
-              </View>
-              <Text style={styles.statLabel}>Cash Sales</Text>
-              <Text style={styles.statValue}>{formatCurrency(summary?.totalCashSales ?? 0)}</Text>
-            </View>
-
-            {/* Other Sales */}
-            <View style={[styles.statCard, { borderLeftColor: COLORS.yellow }]}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                <MaterialCommunityIcon name="dots-horizontal-circle-outline" size={20} color={COLORS.yellow} />
-              </View>
-              <Text style={styles.statLabel}>Other Sales</Text>
-              <Text style={styles.statValue}>{formatCurrency(summary?.totalOtherPayments ?? 0)}</Text>
-            </View>
-
-            {/* Orders */}
-            <View style={[styles.statCard, { borderLeftColor: COLORS.blueGray }]}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                <MaterialIcon name="receipt-long" size={20} color={COLORS.blueGray} />
-              </View>
-              <Text style={styles.statLabel}>Total Orders</Text>
-              <Text style={styles.statValue}>{summary?.totalOrders ?? 0}</Text>
-            </View>
-
-            {/* Refunds */}
-            <View style={[styles.statCard, { borderLeftColor: COLORS.red }]}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                <MaterialCommunityIcon name="cash-refund" size={20} color={COLORS.red} />
-              </View>
-              <Text style={styles.statLabel}>Refunds</Text>
-              <Text style={[styles.statValue, { color: COLORS.red }]}>{formatCurrency(calculatedRefunds)}</Text>
-            </View>
-
-            {/* Pay In/Out Card - Clickable */}
-            <TouchableOpacity
-              style={[styles.statCardClickable, { borderLeftColor: COLORS.orange }]}
-              onPress={() => setShowPayInOutModal(true)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
+            {/* Stats Grid */}
+            <View style={styles.statsGrid}>
+              {/* Card Sales */}
+              <View style={[styles.statCard, { borderLeftColor: COLORS.purpleGray }]}>
                 <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                  <MaterialCommunityIcon name="bank-transfer" size={20} color={COLORS.orange} />
+                  <MaterialIcon name="credit-card" size={20} color={COLORS.purpleGray} />
                 </View>
-                <Text style={styles.statLabel}>Pay In/Out</Text>
-                <View>
-                  <Text style={[styles.statSubValue, { color: COLORS.green }]}>+{formatCurrency(summary?.totalPayIn ?? 0)}</Text>
-                  <Text style={[styles.statSubValue, { color: COLORS.red }]}>-{formatCurrency(summary?.totalPayOut ?? 0)}</Text>
-                </View>
+                <Text style={styles.statLabel}>Card Sales</Text>
+                <Text style={styles.statValue}>{formatCurrency(summary?.totalCardSales ?? 0)}</Text>
               </View>
-              <Icon name="chevron-right" size={20} color={COLORS.textTertiary} style={styles.chevronIcon} />
-            </TouchableOpacity>
 
-            {/* Working Hours Card - Clickable */}
-            <TouchableOpacity
-              style={[styles.statCardClickable, { borderLeftColor: COLORS.blue }]}
-              onPress={() => setShowWorkingHoursModal(true)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
+              {/* Cash Sales */}
+              <View style={[styles.statCard, { borderLeftColor: COLORS.green }]}>
                 <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
-                  <MaterialCommunityIcon name="clock-outline" size={20} color={COLORS.blue} />
+                  <MaterialCommunityIcon name="cash" size={20} color={COLORS.green} />
                 </View>
-                <Text style={styles.statLabel}>Working Hours</Text>
-                <Text style={styles.statValue}>{totalTimeWorked}</Text>
+                <Text style={styles.statLabel}>Cash Sales</Text>
+                <Text style={styles.statValue}>{formatCurrency(summary?.totalCashSales ?? 0)}</Text>
               </View>
-              <Icon name="chevron-right" size={20} color={COLORS.textTertiary} style={styles.chevronIcon} />
-            </TouchableOpacity>
-          </View>
 
-          {/* Recent Orders List */}
-          <View style={styles.section}>
+              {/* Other Sales */}
+              <View style={[styles.statCard, { borderLeftColor: COLORS.yellow }]}>
+                <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
+                  <MaterialCommunityIcon name="dots-horizontal-circle-outline" size={20} color={COLORS.yellow} />
+                </View>
+                <Text style={styles.statLabel}>Other Sales</Text>
+                <Text style={styles.statValue}>{formatCurrency(summary?.totalOtherPayments ?? 0)}</Text>
+              </View>
 
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <MaterialIcon name="receipt" size={24} color={COLORS.darkNavy} />
-                <Text style={styles.sectionTitle}>Orders & Receipts</Text>
+              {/* Orders */}
+              <View style={[styles.statCard, { borderLeftColor: COLORS.blueGray }]}>
+                <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
+                  <MaterialIcon name="receipt-long" size={20} color={COLORS.blueGray} />
+                </View>
+                <Text style={styles.statLabel}>Total Orders</Text>
+                <Text style={styles.statValue}>{summary?.totalOrders ?? 0}</Text>
               </View>
-              <View style={styles.sectionBadge}>
-                <Text style={styles.sectionBadgeText}>{filteredOrders.length} Orders</Text>
+
+              {/* Refunds */}
+              <View style={[styles.statCard, { borderLeftColor: COLORS.red }]}>
+                <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
+                  <MaterialCommunityIcon name="cash-refund" size={20} color={COLORS.red} />
+                </View>
+                <Text style={styles.statLabel}>Refunds</Text>
+                <Text style={[styles.statValue, { color: COLORS.red }]}>{formatCurrency(calculatedRefunds)}</Text>
               </View>
+
+              {/* Pay In/Out Card - Clickable */}
+              <TouchableOpacity
+                style={[styles.statCardClickable, { borderLeftColor: COLORS.orange }]}
+                onPress={() => setShowPayInOutModal(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cardContent}>
+                  <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
+                    <MaterialCommunityIcon name="bank-transfer" size={20} color={COLORS.orange} />
+                  </View>
+                  <Text style={styles.statLabel}>Pay In/Out</Text>
+                  <View>
+                    <Text style={[styles.statSubValue, { color: COLORS.green }]}>+{formatCurrency(summary?.totalPayIn ?? 0)}</Text>
+                    <Text style={[styles.statSubValue, { color: COLORS.red }]}>-{formatCurrency(summary?.totalPayOut ?? 0)}</Text>
+                  </View>
+                </View>
+                <Icon name="chevron-right" size={20} color={COLORS.textTertiary} style={styles.chevronIcon} />
+              </TouchableOpacity>
+
+              {/* Working Hours Card - Clickable */}
+              <TouchableOpacity
+                style={[styles.statCardClickable, { borderLeftColor: COLORS.blue }]}
+                onPress={() => setShowWorkingHoursModal(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cardContent}>
+                  <View style={[styles.statIcon, { backgroundColor: COLORS.containerGray }]}>
+                    <MaterialCommunityIcon name="clock-outline" size={20} color={COLORS.blue} />
+                  </View>
+                  <Text style={styles.statLabel}>Working Hours</Text>
+                  <Text style={styles.statValue}>{totalTimeWorked}</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={COLORS.textTertiary} style={styles.chevronIcon} />
+              </TouchableOpacity>
             </View>
 
-            {/* Order Type Filter Tabs */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.orderTypeTabs}
-              contentContainerStyle={styles.orderTypeTabsContent}
-            >
-              {[
-                { key: 'all', label: 'All', count: orderTypeCounts.all },
-                { key: 'sales', label: 'Sales', count: orderTypeCounts.sales },
-                { key: 'refunds', label: 'Refunds', count: orderTypeCounts.refunds },
-              ].map((tab) => (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.orderTypeTab,
-                    orderTypeFilter === tab.key && styles.orderTypeTabActive
-                  ]}
-                  onPress={() => setOrderTypeFilter(tab.key as any)}
-                >
-                  <Text style={[
-                    styles.orderTypeTabText,
-                    orderTypeFilter === tab.key && styles.orderTypeTabTextActive
-                  ]}>
-                    {tab.label}
-                  </Text>
-                  {tab.count > 0 && (
-                    <View style={[
-                      styles.orderTypeTabBadge,
-                      orderTypeFilter === tab.key && styles.orderTypeTabBadgeActive
-                    ]}>
-                      <Text style={[
-                        styles.orderTypeTabBadgeText,
-                        orderTypeFilter === tab.key && styles.orderTypeTabBadgeTextActive
-                      ]}>
-                        {tab.count}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {/* Recent Orders List */}
+            <View style={styles.section}>
 
-            {filteredOrders.length > 0 ? (
-              <View style={{ maxHeight: 400 }}>
-                <ScrollView
-                  nestedScrollEnabled={true}
-                  showsVerticalScrollIndicator={true}
-                  contentContainerStyle={styles.ordersList}
-                >
-                  {filteredOrders.map((order) => (
-                    <TouchableOpacity
-                      key={order.id}
-                      style={styles.orderRow}
-                      onPress={() => handleOrderClick(order.id)}
-                    >
-                      <View style={styles.orderInfo}>
-                        <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
-                        <Text style={styles.orderDate}>{moment(order.createdAt).format('MMM D, h:mm A')}</Text>
-                      </View>
-                      <View style={styles.orderMeta}>
-                        <View style={[
-                          styles.statusBadge,
-                          { backgroundColor: order.status === 'COMPLETED' ? COLORS.successBg : COLORS.errorBg }
-                        ]}>
-                          <Text style={[
-                            styles.statusText,
-                            { color: order.status === 'COMPLETED' ? COLORS.successText : COLORS.errorText }
-                          ]}>
-                            {order.status}
-                          </Text>
-                        </View>
-                        <Text style={styles.orderTotal}>{formatCurrency(order.total)}</Text>
-                        <Icon name="chevron-right" size={16} color={COLORS.gray} />
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No Recent Orders</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Top Selling Items */}
-          <View style={[styles.section, { marginTop: 24 }]}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <MaterialCommunityIcon name="trophy" size={24} color={COLORS.yellow} />
-                <Text style={styles.sectionTitle}>Top Selling Items</Text>
-              </View>
-              {topItems.length > 0 && (
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleContainer}>
+                  <MaterialIcon name="receipt" size={24} color={COLORS.darkNavy} />
+                  <Text style={styles.sectionTitle}>Orders & Receipts</Text>
+                </View>
                 <View style={styles.sectionBadge}>
-                  <Text style={styles.sectionBadgeText}>{topItems.length} Items</Text>
+                  <Text style={styles.sectionBadgeText}>{filteredOrders.length} Orders</Text>
+                </View>
+              </View>
+
+              {/* Order Type Filter Tabs */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.orderTypeTabs}
+                contentContainerStyle={styles.orderTypeTabsContent}
+              >
+                {[
+                  { key: 'all', label: 'All', count: orderTypeCounts.all },
+                  { key: 'sales', label: 'Sales', count: orderTypeCounts.sales },
+                  { key: 'refunds', label: 'Refunds', count: orderTypeCounts.refunds },
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[
+                      styles.orderTypeTab,
+                      orderTypeFilter === tab.key && styles.orderTypeTabActive
+                    ]}
+                    onPress={() => setOrderTypeFilter(tab.key as any)}
+                  >
+                    <Text style={[
+                      styles.orderTypeTabText,
+                      orderTypeFilter === tab.key && styles.orderTypeTabTextActive
+                    ]}>
+                      {tab.label}
+                    </Text>
+                    {tab.count > 0 && (
+                      <View style={[
+                        styles.orderTypeTabBadge,
+                        orderTypeFilter === tab.key && styles.orderTypeTabBadgeActive
+                      ]}>
+                        <Text style={[
+                          styles.orderTypeTabBadgeText,
+                          orderTypeFilter === tab.key && styles.orderTypeTabBadgeTextActive
+                        ]}>
+                          {tab.count}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {filteredOrders.length > 0 ? (
+                <View style={{ maxHeight: 400 }}>
+                  <ScrollView
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={styles.ordersList}
+                  >
+                    {filteredOrders.map((order) => (
+                      <TouchableOpacity
+                        key={order.id}
+                        style={styles.orderRow}
+                        onPress={() => handleOrderClick(order.id)}
+                      >
+                        <View style={styles.orderInfo}>
+                          <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+                          <Text style={styles.orderDate}>{moment(order.createdAt).format('MMM D, h:mm A')}</Text>
+                        </View>
+                        <View style={styles.orderMeta}>
+                          <View style={[
+                            styles.statusBadge,
+                            { backgroundColor: order.status === 'COMPLETED' ? COLORS.successBg : COLORS.errorBg }
+                          ]}>
+                            <Text style={[
+                              styles.statusText,
+                              { color: order.status === 'COMPLETED' ? COLORS.successText : COLORS.errorText }
+                            ]}>
+                              {order.status}
+                            </Text>
+                          </View>
+                          <Text style={styles.orderTotal}>{formatCurrency(order.total)}</Text>
+                          <Icon name="chevron-right" size={16} color={COLORS.gray} />
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No Recent Orders</Text>
                 </View>
               )}
             </View>
 
-            {topItems.length > 0 ? (
-              <View style={styles.topItemsList}>
-                {topItems.map((item, index) => (
-                  <View key={index} style={styles.topItemRow}>
-                    <View style={[
-                      styles.rankBadge,
-                      index === 0 && { backgroundColor: COLORS.warningBg },
-                      index === 1 && { backgroundColor: COLORS.cardBg },
-                      index === 2 && { backgroundColor: COLORS.warningBg },
-                    ]}>
-                      {index < 3 ? (
-                        <MaterialCommunityIcon
-                          name={index === 0 ? "crown" : index === 1 ? "medal" : "trophy-variant"}
-                          size={16}
-                          color={index === 0 ? COLORS.warning : index === 1 ? COLORS.graphGray : COLORS.orange}
-                        />
-                      ) : (
-                        <Text style={styles.rankText}>#{index + 1}</Text>
-                      )}
-                    </View>
-                    <View style={styles.topItemInfo}>
-                      <Text style={styles.topItemName} numberOfLines={1}>{item.name}</Text>
-                      <View style={styles.topItemMeta}>
-                        <MaterialCommunityIcon name="tag-outline" size={12} color={COLORS.gray} />
-                        <Text style={styles.topItemDetail}>
-                          {item.price ? formatCurrency(item.price) : 'N/A'}
-                        </Text>
+            {/* Top Selling Items */}
+            <View style={[styles.section, { marginTop: 24 }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleContainer}>
+                  <MaterialCommunityIcon name="trophy" size={24} color={COLORS.yellow} />
+                  <Text style={styles.sectionTitle}>Top Selling Items</Text>
+                </View>
+                {topItems.length > 0 && (
+                  <View style={styles.sectionBadge}>
+                    <Text style={styles.sectionBadgeText}>{topItems.length} Items</Text>
+                  </View>
+                )}
+              </View>
+
+              {topItems.length > 0 ? (
+                <View style={styles.topItemsList}>
+                  {topItems.map((item, index) => (
+                    <View key={index} style={styles.topItemRow}>
+                      <View style={[
+                        styles.rankBadge,
+                        index === 0 && { backgroundColor: COLORS.warningBg },
+                        index === 1 && { backgroundColor: COLORS.cardBg },
+                        index === 2 && { backgroundColor: COLORS.warningBg },
+                      ]}>
+                        {index < 3 ? (
+                          <MaterialCommunityIcon
+                            name={index === 0 ? "crown" : index === 1 ? "medal" : "trophy-variant"}
+                            size={16}
+                            color={index === 0 ? COLORS.warning : index === 1 ? COLORS.graphGray : COLORS.orange}
+                          />
+                        ) : (
+                          <Text style={styles.rankText}>#{index + 1}</Text>
+                        )}
+                      </View>
+                      <View style={styles.topItemInfo}>
+                        <Text style={styles.topItemName} numberOfLines={1}>{item.name}</Text>
+                        <View style={styles.topItemMeta}>
+                          <MaterialCommunityIcon name="tag-outline" size={12} color={COLORS.gray} />
+                          <Text style={styles.topItemDetail}>
+                            {item.price ? formatCurrency(item.price) : 'N/A'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.topItemStats}>
+                        <Text style={styles.topItemRevenue}>{formatCurrency(item.totalRevenue)}</Text>
+                        <View style={styles.quantityBadge}>
+                          <Icon name="shopping-bag" size={10} color={COLORS.green} />
+                          <Text style={styles.quantityText}>{item.totalQuantitySold} sold</Text>
+                        </View>
                       </View>
                     </View>
-                    <View style={styles.topItemStats}>
-                      <Text style={styles.topItemRevenue}>{formatCurrency(item.totalRevenue)}</Text>
-                      <View style={styles.quantityBadge}>
-                        <Icon name="shopping-bag" size={10} color={COLORS.green} />
-                        <Text style={styles.quantityText}>{item.totalQuantitySold} sold</Text>
-                      </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <View style={styles.emptyIconContainer}>
+                    <MaterialCommunityIcon name="package-variant" size={40} color={COLORS.containerGray} />
+                  </View>
+                  <Text style={styles.emptyText}>No Sales Data For This Period</Text>
+                </View>
+              )}
+            </View>
+
+          </Animated.View>
+        )}
+
+        {reportType === 'items' && (
+          <View style={styles.content}>
+            <View style={[styles.sectionHeader, { marginTop: 0 }]}>
+              <Text style={styles.sectionTitle}>Sales by Item</Text>
+              <Text style={styles.sectionBadgeText}>{topItems.length} items</Text>
+            </View>
+            <View style={styles.topItemsList}>
+              {topItems.length > 0 ? topItems.map((item, index) => (
+                <View key={index} style={styles.topItemRow}>
+                  <View style={[
+                    styles.rankBadge,
+                    { backgroundColor: index < 3 ? (index === 0 ? COLORS.warningBg : index === 1 ? COLORS.containerGray : COLORS.orange + '15') : COLORS.containerGray }
+                  ]}>
+                    <Text style={styles.rankText}>#{index + 1}</Text>
+                  </View>
+                  <View style={styles.topItemInfo}>
+                    <Text style={styles.topItemName} numberOfLines={1}>{item.name}</Text>
+                    <View style={styles.topItemMeta}>
+                      <MaterialCommunityIcon name="tag-outline" size={12} color={COLORS.gray} />
+                      <Text style={styles.topItemDetail}>
+                        {item.price ? formatCurrency(item.price) : 'N/A'}
+                      </Text>
                     </View>
                   </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIconContainer}>
-                  <MaterialCommunityIcon name="package-variant" size={40} color={COLORS.containerGray} />
+                  <View style={styles.topItemStats}>
+                    <Text style={styles.topItemRevenue}>{formatCurrency(item.totalRevenue)}</Text>
+                    <View style={styles.quantityBadge}>
+                      <Icon name="shopping-bag" size={10} color={COLORS.green} />
+                      <Text style={styles.quantityText}>{item.totalQuantitySold} sold</Text>
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.emptyText}>No Sales Data For This Period</Text>
-              </View>
-            )}
+              )) : (
+                <View style={styles.emptyState}>
+                  <MaterialCommunityIcon name="package-variant" size={40} color={COLORS.containerGray} />
+                  <Text style={styles.emptyText}>No Item Sales Data</Text>
+                </View>
+              )}
+            </View>
           </View>
+        )}
 
-        </Animated.View>
+        {reportType === 'employees' && (
+          <View style={styles.content}>
+            <View style={[styles.sectionHeader, { marginTop: 0 }]}>
+              <Text style={styles.sectionTitle}>Sales by Employee</Text>
+            </View>
+            <View style={styles.topItemsList}>
+              {employeeStats.length > 0 ? employeeStats.map((emp, index) => (
+                <View key={emp.name} style={styles.topItemRow}>
+                  <View style={[styles.rankBadge, { backgroundColor: COLORS.containerGray }]}>
+                    <Text style={styles.rankText}>#{index + 1}</Text>
+                  </View>
+                  <View style={styles.topItemInfo}>
+                    <Text style={styles.topItemName}>{emp.name}</Text>
+                    <Text style={styles.topItemDetail}>{emp.count} orders processed</Text>
+                  </View>
+                  <Text style={styles.topItemRevenue}>{formatCurrency(emp.total)}</Text>
+                </View>
+              )) : (
+                <View style={styles.emptyState}>
+                  <MaterialCommunityIcon name="account-group" size={40} color={COLORS.containerGray} />
+                  <Text style={styles.emptyText}>No Employee Sales Data</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {reportType === 'receipts' && (
+          <View style={styles.content}>
+            <View style={[styles.sectionHeader, { marginTop: 0 }]}>
+              <Text style={styles.sectionTitle}>Receipts</Text>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Export CSV</Text>
+                <Icon name="download" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.ordersList}>
+              {filteredOrders.length > 0 ? filteredOrders.map((order) => (
+                <TouchableOpacity
+                  key={order.id}
+                  style={styles.orderRow}
+                  onPress={() => handleOrderClick(order.id)}
+                >
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+                    <Text style={styles.orderDate}>{moment(order.createdAt).format('MMM D, h:mm A')}</Text>
+                  </View>
+                  <View style={styles.orderMeta}>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: order.status === 'COMPLETED' ? COLORS.successBg : order.status === 'REFUNDED' ? COLORS.errorBg : COLORS.containerGray }
+                    ]}>
+                      <Text style={[
+                        styles.statusText,
+                        { color: order.status === 'COMPLETED' ? COLORS.green : order.status === 'REFUNDED' ? COLORS.red : COLORS.textSecondary }
+                      ]}>
+                        {order.status}
+                      </Text>
+                    </View>
+                    <Text style={styles.orderTotal}>{formatCurrency(order.total)}</Text>
+                    <Icon name="chevron-right" size={20} color={COLORS.textTertiary} />
+                  </View>
+                </TouchableOpacity>
+              )) : (
+                <View style={styles.emptyState}>
+                  <MaterialIcon name="receipt" size={40} color={COLORS.containerGray} />
+                  <Text style={styles.emptyText}>No Receipts Found</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Modals */}
@@ -1495,6 +1665,53 @@ const createStyles = (colors: any) => StyleSheet.create({
     minWidth: 70,
     textAlign: 'right'
   },
+  // Report Type Tabs
+  tabContainer: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    minHeight: 40,
+  },
+  tabContent: {
+    paddingHorizontal: 20,
+    gap: 10,
+    paddingVertical: 2, // Extra padding for shadows
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minHeight: 36,
+  },
+  tabActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  tabTextActive: {
+    fontWeight: '700',
+  },
+
   // Order Type Filter Tabs
   orderTypeTabs: {
     marginBottom: 16,

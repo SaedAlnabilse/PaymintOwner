@@ -454,6 +454,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -547,6 +554,11 @@ const styles = StyleSheet.create({
   modalContent: {
     borderRadius: 20,
     padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',

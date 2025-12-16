@@ -80,7 +80,9 @@ class AuthService {
       const response = await apiClient.get('/api/auth/profile');
       return response.data;
     } catch (error: any) {
-      console.error('Failed to get profile:', error.response?.data || error.message);
+      if (error.response?.status !== 401) {
+        console.error('Failed to get profile:', error.response?.data || error.message);
+      }
       throw error;
     }
   }
@@ -89,7 +91,10 @@ class AuthService {
     try {
       await apiClient.post('/api/auth/logout');
     } catch (error: any) {
-      console.error('Logout request failed:', error.response?.data || error.message);
+      // Ignore 401 errors on logout as it means token is already invalid/expired
+      if (error.response?.status !== 401) {
+        console.warn('Logout request failed:', error.response?.data || error.message);
+      }
     } finally {
       await this.clearToken();
       await this.clearUser();

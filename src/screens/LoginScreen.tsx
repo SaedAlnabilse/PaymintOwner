@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Animated,
   Dimensions,
   TouchableOpacity,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,12 +19,11 @@ import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIc
 import { RootState, AppDispatch } from '../store/store';
 import { loginUser, clearError, logout } from '../store/slices/authSlice';
 
-import LogoHeader from '../components/auth/LogoHeader';
 import FormInput from '../components/auth/FormInput';
 import PrimaryButton from '../components/common/PrimaryButton';
 import LoadingModal from '../components/common/LoadingModal';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
@@ -35,53 +34,8 @@ const LoginScreen = () => {
   const [showSuccessLoading, setShowSuccessLoading] = useState(false);
   const [showAdminOnlyModal, setShowAdminOnlyModal] = useState(false);
 
-  // Animation values
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(50));
-  const [logoScale] = useState(new Animated.Value(0.8));
-  const [pulseAnim] = useState(new Animated.Value(1));
-
   const dispatch = useDispatch<AppDispatch>();
   const { error: globalError } = useSelector((state: RootState) => state.auth);
-
-  useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 20,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 15,
-        friction: 5,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Continuous pulse animation for decorative elements
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
 
   const validateInputs = () => {
     let hasError = false;
@@ -91,23 +45,17 @@ const LoginScreen = () => {
     if (!username.trim()) {
       setUsernameError('Username is required');
       hasError = true;
-    } else if (username.trim().length < 3) {
-      setUsernameError('Username must be at least 3 characters');
-      hasError = true;
     }
 
     if (!password.trim()) {
       setPasswordError('Password is required');
-      hasError = true;
-    } else if (password.trim().length < 4) {
-      setPasswordError('Password must be at least 4 characters');
       hasError = true;
     }
 
     return !hasError;
   };
 
-  const isAdminOrOwner = (role: string | undefined): boolean => {
+  const isAdminOrOwner = (role?: string): boolean => {
     if (!role) return false;
     const normalizedRole = role.toUpperCase();
     return normalizedRole === 'ADMIN' || normalizedRole === 'OWNER';
@@ -115,26 +63,20 @@ const LoginScreen = () => {
 
   const handleAdminOnlyDismiss = () => {
     setShowAdminOnlyModal(false);
-    // Clear credentials and logout
     setUsername('');
     setPassword('');
     dispatch(logout());
   };
 
   const handleLogin = async () => {
-    // Clear previous errors
     dispatch(clearError());
     setUsernameError('');
     setPasswordError('');
 
-    // Validate inputs FIRST - before any loading
     if (!validateInputs()) {
-      // Validation failed - errors are already set by validateInputs()
-      // Don't proceed, don't show loading
       return;
     }
 
-    // Validation passed - now make API call (no loading spinner for errors)
     setIsChecking(true);
     try {
       const result = await dispatch(
@@ -144,25 +86,27 @@ const LoginScreen = () => {
         }),
       ).unwrap();
 
-      // Check if user is admin or owner
       const userRole = result?.user?.role;
       if (!isAdminOrOwner(userRole)) {
-        // Not an admin - show popup and don't proceed
         setIsChecking(false);
         setShowAdminOnlyModal(true);
         return;
       }
 
-      // Success - show success loading
       setShowSuccessLoading(true);
     } catch (err: any) {
-      // API error - show inline without loading
       const errorMsg = typeof err === 'string' ? err : err?.message || '';
       if (errorMsg.includes('inactive') || errorMsg.includes('only for owners') || errorMsg.includes('administrators only')) {
-        // Show admin-only modal for role-related errors
         setShowAdminOnlyModal(true);
       } else {
-        setPasswordError('Incorrect username or password');
+        // Decide where to show the error
+        if (errorMsg.toLowerCase().includes('password')) { // Simple check for password related errors
+          setPasswordError('Incorrect username or password');
+        } else {
+          // Fallback to global error display logic managed by Redux state,
+          // or manually set a general error if needed.
+          // The globalError from redux will be displayed in the UI.
+        }
       }
     } finally {
       setIsChecking(false);
@@ -171,6 +115,7 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <LoadingModal
         visible={showSuccessLoading}
         text="Logging In..."
@@ -189,9 +134,9 @@ const LoginScreen = () => {
             <View style={styles.adminOnlyIconContainer}>
               <MaterialCommunityIcon name="shield-lock" size={48} color="#7CC39F" />
             </View>
-            <Text style={styles.adminOnlyTitle}>Admin Access Only</Text>
+            <Text style={styles.adminOnlyTitle}>Access Denied</Text>
             <Text style={styles.adminOnlyMessage}>
-              This App Is For Administrators Only. Please Contact Your Manager If You Need Access.
+              This application is restricted to Administrators and Owners only.
             </Text>
             <TouchableOpacity
               style={styles.adminOnlyButton}
@@ -204,27 +149,6 @@ const LoginScreen = () => {
         </View>
       </Modal>
 
-      {/* Animated Background Gradient Effect */}
-      <View style={styles.gradientBackground}>
-        <View style={styles.gradientLayer1} />
-        <View style={styles.gradientLayer2} />
-        <View style={styles.gradientLayer3} />
-      </View>
-
-      {/* Decorative Circles */}
-      <Animated.View
-        style={[
-          styles.decorativeCircle1,
-          { transform: [{ scale: pulseAnim }] }
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.decorativeCircle2,
-          { transform: [{ scale: pulseAnim }] }
-        ]}
-      />
-
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -235,22 +159,9 @@ const LoginScreen = () => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Animated.View
-              style={[
-                styles.content,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                }
-              ]}
-            >
-              {/* Logo Section with Animation */}
-              <Animated.View
-                style={[
-                  styles.logoContainer,
-                  { transform: [{ scale: logoScale }] }
-                ]}
-              >
+            <View style={styles.content}>
+              {/* Logo Section */}
+              <View style={styles.logoContainer}>
                 <View style={styles.logoWrapper}>
                   <View style={styles.logoIconContainer}>
                     <MaterialCommunityIcon name="shield-check" size={56} color="#7CC39F" />
@@ -258,18 +169,18 @@ const LoginScreen = () => {
                   <Text style={styles.appTitle}>PayMint Owner</Text>
                   <Text style={styles.appSubtitle}>Business Management Portal</Text>
                 </View>
-              </Animated.View>
+              </View>
 
-              {/* Login Card with Glassmorphism */}
+              {/* Login Card */}
               <View style={styles.loginCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.headerIconContainer}>
                     <Icon name="log-in" size={24} color="#7CC39F" />
                   </View>
                   <View style={styles.headerTextContainer}>
-                    <Text style={styles.welcomeText}>Welcome Back!</Text>
+                    <Text style={styles.welcomeText}>Welcome Back</Text>
                     <Text style={styles.instructionText}>
-                      Sign In To Access Your Dashboard
+                      Please sign in to continue
                     </Text>
                   </View>
                 </View>
@@ -300,12 +211,14 @@ const LoginScreen = () => {
                     secureTextEntry={true}
                   />
 
-                  {globalError && !usernameError && !passwordError ? (
+                  {(globalError || passwordError) && (
                     <View style={styles.globalErrorContainer}>
                       <MaterialCommunityIcon name="alert-circle" size={18} color="#D55263" />
-                      <Text style={styles.globalErrorText}>{globalError}</Text>
+                      <Text style={styles.globalErrorText}>
+                        {passwordError || globalError || "Authentication failed"}
+                      </Text>
                     </View>
-                  ) : null}
+                  )}
 
                   <PrimaryButton
                     title="Sign In"
@@ -321,16 +234,7 @@ const LoginScreen = () => {
                 </View>
               </View>
 
-              {/* Footer */}
-              <View style={styles.footer}>
-                <View style={styles.footerBadge}>
-                  <MaterialCommunityIcon name="information" size={14} color="#64748B" />
-                  <Text style={styles.footerText}>
-                    Administrator Credentials Required
-                  </Text>
-                </View>
-              </View>
-            </Animated.View>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -343,60 +247,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  gradientBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  gradientLayer1: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: '#7CC39F',
-    opacity: 0.08,
-  },
-  gradientLayer2: {
-    position: 'absolute',
-    top: '30%',
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: '#A8BBBF',
-    opacity: 0.06,
-  },
-  gradientLayer3: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: '#F8FAFC',
-    opacity: 0.1,
-  },
-  decorativeCircle1: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#7CC39F',
-    opacity: 0.08,
-    top: -100,
-    right: -100,
-  },
-  decorativeCircle2: {
-    position: 'absolute',
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: '#D0C962',
-    opacity: 0.06,
-    bottom: -80,
-    left: -80,
-  },
   safeArea: {
     flex: 1,
   },
@@ -407,10 +257,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 20,
   },
   content: {
     width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
   },
 
   // Logo Section
@@ -433,51 +285,51 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 12,
-    borderWidth: 3,
-    borderColor: 'rgba(124, 195, 159, 0.2)',
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   appTitle: {
     fontSize: 32,
     fontWeight: '800',
     color: '#1F1D2B',
     letterSpacing: -0.5,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   appSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7CC39F',
+    color: '#64748B',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 1.5,
   },
 
   // Login Card
   loginCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 28,
+    borderRadius: 24,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
     borderWidth: 1,
-    borderColor: 'rgba(124, 195, 159, 0.1)',
+    borderColor: '#F1F5F9',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
     paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   headerIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: '#E8E8E8',
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -486,11 +338,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F1D2B',
-    marginBottom: 4,
-    letterSpacing: -0.5,
+    marginBottom: 2,
+    letterSpacing: -0.3,
   },
   instructionText: {
     fontSize: 14,
@@ -500,24 +352,24 @@ const styles = StyleSheet.create({
 
   // Form
   formContainer: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   globalErrorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#D55263',
-    gap: 10,
+    borderLeftColor: '#EF4444',
   },
   globalErrorText: {
     flex: 1,
-    color: '#D55263',
-    fontSize: 14,
+    color: '#EF4444',
+    fontSize: 13,
     fontWeight: '600',
+    marginLeft: 10,
   },
 
   // Security Badge
@@ -527,47 +379,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
     paddingVertical: 12,
-    paddingHorizontal: 16,
     borderRadius: 12,
     gap: 8,
-    marginTop: 8,
+    marginTop: 16,
   },
   securityText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7CC39F',
-    letterSpacing: 0.3,
-  },
-
-  // Footer
-  footer: {
-    marginTop: 32,
-    alignItems: 'center',
-  },
-  footerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  footerText: {
     color: '#64748B',
-    fontSize: 13,
-    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 
   // Admin Only Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -581,21 +407,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     elevation: 20,
   },
   adminOnlyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(124, 195, 159, 0.15)',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   adminOnlyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1F1D2B',
     marginBottom: 12,
@@ -617,9 +443,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     shadowColor: '#7CC39F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   adminOnlyButtonText: {
     color: '#FFFFFF',
@@ -630,4 +456,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-

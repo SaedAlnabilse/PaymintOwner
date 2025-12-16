@@ -1,14 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ScreenContainer } from '../components/ScreenContainer';
-import { itemsService, Item } from '../services/itemsService';
+import { itemsService, Item, CreateItemDto, UpdateItemDto } from '../services/itemsService';
+import ItemFormModal from '../components/inventory/ItemFormModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
 import moment from 'moment-timezone';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { fetchNotifications } from '../store/slices/notificationsSlice';
+import { apiClient } from '../services/apiClient';
+
+// Category interface
+interface Category {
+  id: string;
+  name: string;
+}
+
+type SortOption = 'name' | 'price' | 'stock';
 
 const InventoryScreen = () => {
   const { isDarkMode } = useTheme();
@@ -16,8 +26,15 @@ const InventoryScreen = () => {
   const styles = createStyles(COLORS);
   const [activeTab, setActiveTab] = useState<'stock' | 'alerts'>('stock');
   const [items, setItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'item' | 'addon'>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
+
+  // Item Modal State
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
 
@@ -33,6 +50,17 @@ const InventoryScreen = () => {
       (notification) => stockAlertTypes.includes(notification.type)
     );
   }, [notifications]);
+
+  // Calculate counts for items and addons
+  const itemCounts = useMemo(() => {
+    const itemsCount = items.filter(i => (i.type || 'ITEM').toUpperCase() === 'ITEM').length;
+    const addonsCount = items.filter(i => (i.type || 'ITEM').toUpperCase() === 'ADDON').length;
+    return {
+      all: items.length,
+      item: itemsCount,
+      addon: addonsCount,
+    };
+  }, [items]);
 
   // Stock summary calculations
   const stockSummary = useMemo(() => {
@@ -64,6 +92,7 @@ const InventoryScreen = () => {
 
   useEffect(() => {
     loadItems();
+    loadCategories();
     // Fetch notifications to get stock alerts
     dispatch(fetchNotifications({ limit: 100 }));
   }, [dispatch]);
@@ -80,9 +109,89 @@ const InventoryScreen = () => {
     }
   };
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const loadCategories = async () => {
+    try {
+      const response = await apiClient.get('/api/categories');
+      setCategories(response.data || []);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const handleAddItem = () => {
+    setSelectedItem(null);
+    setShowItemModal(true);
+  };
+
+  const handleEditItem = (item: Item) => {
+    setSelectedItem(item);
+    setShowItemModal(true);
+  };
+
+  const handleSaveItem = async (data: CreateItemDto | UpdateItemDto) => {
+    try {
+      if (selectedItem) {
+        await itemsService.update(selectedItem.id, data as UpdateItemDto);
+      } else {
+        await itemsService.create(data as CreateItemDto);
+      }
+      await loadItems();
+    } catch (error) {
+      console.error('Failed to save item:', error);
+      throw error; // Propagate to modal for alert
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    try {
+      await itemsService.delete(itemId);
+      await loadItems();
+      setShowItemModal(false);
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+      throw error;
+    }
+  };
+
+  const getCategoryName = useCallback((categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || 'Uncategorized';
+  }, [categories]);
+
+  // Filter and sort items
+  const filteredItems = useMemo(() => {
+    let filtered = items.filter(item =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Apply type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(item => {
+        const type = (item.type || 'ITEM').toUpperCase();
+        return filterType === 'item' ? type === 'ITEM' : type === 'ADDON';
+      });
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'price':
+        filtered = [...filtered].sort((a, b) => b.price - a.price);
+        break;
+      case 'stock':
+        filtered = [...filtered].sort((a, b) => {
+          const stockA = a.trackStock ? (a.availableStock || 0) : Infinity;
+          const stockB = b.trackStock ? (b.availableStock || 0) : Infinity;
+          return stockA - stockB; // Low stock first
+        });
+        break;
+      case 'name':
+      default:
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    return filtered;
+  }, [items, searchQuery, sortBy, filterType]);
 
   const getStockStatus = (item: Item) => {
     if (!item.trackStock) return { label: 'Unlimited', color: COLORS.primary, bg: COLORS.successBg, icon: 'infinity' };
@@ -112,9 +221,13 @@ const InventoryScreen = () => {
   const renderStockItem = ({ item }: { item: Item }) => {
     const stockStatus = getStockStatus(item);
     const itemType = getItemType(item);
+    const categoryName = getCategoryName(item.categoryId);
 
     return (
-      <View style={[styles.itemCard, { backgroundColor: COLORS.white }]}>
+      <TouchableOpacity
+        style={[styles.itemCard, { backgroundColor: COLORS.white }]}
+        onPress={() => handleEditItem(item)}
+      >
         <View style={styles.itemMainContent}>
           <View style={[styles.itemIconContainer, { backgroundColor: COLORS.containerGray }]}>
             <Icon
@@ -139,6 +252,13 @@ const InventoryScreen = () => {
                 </Text>
               </View>
             </View>
+            {/* Category Name */}
+            <View style={styles.categoryRow}>
+              <Icon name="folder-outline" size={12} color={COLORS.textTertiary} />
+              <Text style={[styles.categoryText, { color: COLORS.textSecondary }]} numberOfLines={1}>
+                {categoryName}
+              </Text>
+            </View>
             <View style={styles.itemMetaRow}>
               <Text style={[styles.itemPrice, { color: COLORS.primary }]}>
                 ${item.price.toFixed(2)}
@@ -152,7 +272,7 @@ const InventoryScreen = () => {
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -195,6 +315,12 @@ const InventoryScreen = () => {
             onPress={loadItems}
           >
             <Icon name="refresh" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: COLORS.primary }]}
+            onPress={handleAddItem}
+          >
+            <Icon name="plus" size={20} color="#FFF" />
           </TouchableOpacity>
         </View>
 
@@ -294,6 +420,82 @@ const InventoryScreen = () => {
         </View>
       )}
 
+      {/* Filter Type Chips */}
+      {activeTab === 'stock' && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+          contentContainerStyle={styles.filterContent}
+        >
+          {[
+            { key: 'all' as const, label: 'All', count: itemCounts.all },
+            { key: 'item' as const, label: 'Items', count: itemCounts.item },
+            { key: 'addon' as const, label: 'Add-ons', count: itemCounts.addon },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.key}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: filterType === option.key ? COLORS.primary : COLORS.white,
+                  borderColor: filterType === option.key ? COLORS.primary : COLORS.border,
+                }
+              ]}
+              onPress={() => setFilterType(option.key)}
+            >
+              <Text style={[
+                styles.filterChipText,
+                { color: filterType === option.key ? '#FFF' : COLORS.textSecondary }
+              ]}>
+                {option.label} ({option.count})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Sort Controls */}
+      {activeTab === 'stock' && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.sortContainer}
+          contentContainerStyle={styles.sortContent}
+        >
+          <Text style={[styles.sortLabel, { color: COLORS.textSecondary }]}>Sort by:</Text>
+          {[
+            { key: 'name' as SortOption, label: 'Name', icon: 'sort-alphabetical-ascending' },
+            { key: 'price' as SortOption, label: 'Price', icon: 'currency-usd' },
+            { key: 'stock' as SortOption, label: 'Stock', icon: 'package-variant' },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.key}
+              style={[
+                styles.sortChip,
+                {
+                  backgroundColor: sortBy === option.key ? COLORS.primary : COLORS.surface,
+                  borderColor: sortBy === option.key ? COLORS.primary : COLORS.border,
+                }
+              ]}
+              onPress={() => setSortBy(option.key)}
+            >
+              <Icon
+                name={option.icon}
+                size={14}
+                color={sortBy === option.key ? '#FFF' : COLORS.textSecondary}
+              />
+              <Text style={[
+                styles.sortChipText,
+                { color: sortBy === option.key ? '#FFF' : COLORS.textSecondary }
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {activeTab === 'alerts' && stockAlerts.length > 0 && (
         <View style={[styles.alertsSummary, { backgroundColor: COLORS.errorBg }]}>
           <Icon name="information" size={18} color={COLORS.errorText} />
@@ -359,6 +561,15 @@ const InventoryScreen = () => {
           }
         />
       )}
+
+      <ItemFormModal
+        visible={showItemModal}
+        onClose={() => setShowItemModal(false)}
+        onSubmit={handleSaveItem}
+        onDelete={handleDeleteItem}
+        initialData={selectedItem}
+        categories={categories}
+      />
     </ScreenContainer>
   );
 };
@@ -424,6 +635,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   tabs: {
     flexDirection: 'row',
@@ -515,6 +739,59 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  filterContainer: {
+    marginBottom: 12,
+    flexGrow: 0,
+    minHeight: 40,
+  },
+  filterContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+    paddingVertical: 2, // Add some vertical padding for shadows
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sortContainer: {
+    marginBottom: 12,
+    flexGrow: 0,
+    minHeight: 40,
+  },
+  sortContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  sortLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    minHeight: 36,
+  },
+  sortChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -581,6 +858,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
   itemMetaRow: {
     flexDirection: 'row',

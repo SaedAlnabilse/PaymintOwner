@@ -13,7 +13,7 @@ export interface AppSettings {
 
 export const getAppSettings = async (): Promise<AppSettings> => {
   try {
-    const response = await apiClient.get('/app-settings');
+    const response = await apiClient.get('/api/app-settings');
     return response.data;
   } catch (error: any) {
     console.error('Failed to fetch app settings:', error);

@@ -23,7 +23,9 @@ import { checkAuthStatus } from '../store/slices/authSlice';
 import { AppTheme } from '../theme/theme';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+
 import { useAppStateAuth } from '../hooks/useAppStateAuth';
+import BackOfficeHeader from '../components/common/BackOfficeHeader';
 
 const Drawer = createDrawerNavigator();
 const Stack = createNativeStackNavigator();
@@ -38,6 +40,19 @@ const DrawerNavigator = () => {
       initialRouteName="Reports"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
+        header: ({ navigation }) => {
+          // You might need to fetch data like store name or notifications here or pass them down
+          // For now using default placeholders or what's available
+          return (
+            <BackOfficeHeader
+              storeName="Paymint Store"
+              userName="Owner" // Ideally fetched from state
+              storeStatus="CLOSED" // Ideally fetched from state
+              onMenuPress={() => navigation.toggleDrawer()} // Toggle Drawer
+              onNotificationsPress={() => navigation.navigate('Notifications')}
+            />
+          );
+        },
         headerStyle: {
           backgroundColor: COLORS.white,
           elevation: 0,
@@ -157,7 +172,7 @@ const DrawerNavigator = () => {
           title: 'Settings'
         }}
       />
-    </Drawer.Navigator>
+    </Drawer.Navigator >
   );
 };
 

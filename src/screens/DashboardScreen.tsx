@@ -9,8 +9,12 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { RootState } from '../store/store';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
-import { getOwnerDashboard, OwnerDashboard, DashboardSummary } from '../services/dashboard';
-import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales } from '../services/reports';
+import { getOwnerDashboard, OwnerDashboard, DashboardSummary, getStaffOverview, StaffMember } from '../services/dashboard';
+import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales, getHourlySales, HourlySales, fetchOrdersHistory } from '../services/reports';
+import { HistoricalOrder } from '../types/reports';
+
+// Import new dashboard components
+import { SalesTrendChart, TopEmployeesCard, RecentOrdersFeed } from '../components/dashboard';
 
 const DashboardScreen = () => {
   const { isDarkMode } = useTheme();
@@ -34,6 +38,9 @@ const DashboardScreen = () => {
   const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
   const [comparison, setComparison] = useState<SalesComparison | null>(null);
   const [categoryData, setCategoryData] = useState<CategorySales[]>([]);
+  const [hourlySales, setHourlySales] = useState<HourlySales[]>([]);
+  const [recentOrders, setRecentOrders] = useState<HistoricalOrder[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,16 +105,22 @@ const DashboardScreen = () => {
       // Get date ranges based on selected period
       const { currentStart, currentEnd, previousStart, previousEnd } = getDateRanges(selectedPeriod);
 
-      // Fetch all data in parallel
-      const [newData, comparisonData, categories] = await Promise.all([
+      // Fetch all data in parallel - now including hourly sales, orders, and staff data
+      const [newData, comparisonData, categories, hourlyData, ordersData, staffData] = await Promise.all([
         getOwnerDashboard(),
         getSalesComparison(currentStart, currentEnd, previousStart, previousEnd),
         getSalesByCategory(currentStart, currentEnd),
+        getHourlySales(currentStart, currentEnd),
+        fetchOrdersHistory(currentStart, currentEnd, { page: 1, limit: 20, status: 'ALL' }),
+        getStaffOverview(),
       ]);
 
       // Update comparison and category data
       setComparison(comparisonData);
       setCategoryData(categories.slice(0, 5)); // Top 5 categories
+      setHourlySales(hourlyData);
+      setRecentOrders(ordersData || []);
+      setStaffList(staffData?.staff || []);
 
       // Smart Update: Compare new data with current data to avoid unnecessary re-renders
       // and prevent "loading" flickering if data hasn't changed.
@@ -325,17 +338,6 @@ const DashboardScreen = () => {
                   <Text style={styles.featuredCardLabel}>
                     {periodOptions.find(p => p.key === selectedPeriod)?.label || 'Today'}'s Sales
                   </Text>
-                  {(ownerData?.storeStatus === 'OPEN' || dashboardData?.shiftStatus === 'ACTIVE') ? (
-                    <View style={styles.statusIndicator}>
-                      <View style={[styles.statusDot, { backgroundColor: '#FFFFFF' }]} />
-                      <Text style={styles.statusIndicatorText}>Store Open</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.statusIndicator}>
-                      <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
-                      <Text style={styles.statusIndicatorText}>Store Closed</Text>
-                    </View>
-                  )}
                 </View>
                 <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
 
@@ -453,6 +455,32 @@ const DashboardScreen = () => {
                     </View>
                   ))}
                 </View>
+              )}
+
+              {/* Sales Trend Chart - Hourly Performance */}
+              {selectedPeriod === 'today' && hourlySales.length > 0 && (
+                <SalesTrendChart
+                  data={hourlySales}
+                  title="Today's Sales Trend"
+                />
+              )}
+
+              {/* Recent Orders Feed */}
+              {recentOrders.length > 0 && (
+                <RecentOrdersFeed
+                  orders={recentOrders}
+                  onOrderPress={(orderId) => navigation.navigate('Reports')}
+                  onViewAll={() => navigation.navigate('Reports')}
+                  maxItems={5}
+                />
+              )}
+
+              {/* Top Employees Card */}
+              {staffList.length > 0 && (
+                <TopEmployeesCard
+                  employees={staffList}
+                  onViewAll={() => navigation.navigate('Staff')}
+                />
               )}
 
               {/* Quick Actions */}
@@ -850,6 +878,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
     flexGrow: 0,
+    minHeight: 40,
   },
   periodSelectorContent: {
     gap: 8,
@@ -863,7 +892,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 32, // Adjusted for a sleeker look
+    minHeight: 36, // Increased height for better interaction and visual balance
   },
   periodChipText: {
     fontSize: 13,

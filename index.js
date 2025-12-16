@@ -67,7 +67,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
 // Background message handler - MUST be registered outside of application lifecycle
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('📨 Background message received:', remoteMessage);
-  
+
   const { notification, data } = remoteMessage;
   const type = data?.type || 'general';
 
@@ -83,8 +83,8 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
       // The full details are only visible when the user opens the app
       const isHidden = data?.isHidden === 'true';
       const displayTitle = isHidden ? '💰 Cash Alert' : `💰 ${notification?.title || 'Cash Alert'}`;
-      const displayBody = isHidden 
-        ? 'You have a new cash alert. Open the app to view details.' 
+      const displayBody = isHidden
+        ? 'You have a new cash alert. Open the app to view details.'
         : (notification?.body || '');
 
       await notifee.displayNotification({
@@ -160,6 +160,7 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 LogBox.ignoreLogs([
   'Require cycle:',
   'Remote debugger',
+  'This method is deprecated (as well as all React Native Firebase namespaced API)', // Ignore firebase deprecation warning
 ]);
 
 // Wrap App component with error handling

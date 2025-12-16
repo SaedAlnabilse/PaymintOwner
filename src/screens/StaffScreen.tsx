@@ -5,10 +5,13 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { getStaffOverview, StaffMember as StaffMemberType } from '../services/dashboard';
+import { createUser, updateUser, deleteUser, CreateUserDto, UpdateUserDto } from '../services/users';
+import EmployeeFormModal from '../components/staff/EmployeeFormModal';
 
 // Use the optimized StaffMember type from dashboard service
 interface StaffMember extends StaffMemberType {
   // Additional fields if needed
+  email?: string;
 }
 
 const StaffScreen = () => {
@@ -26,6 +29,10 @@ const StaffScreen = () => {
     activeCount: 0,
     offlineCount: 0
   });
+
+  // Modal State
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 
   const getRoleColor = (role: string) => {
     switch (role?.toLowerCase()) {
@@ -85,6 +92,41 @@ const StaffScreen = () => {
     fetchStaffData();
   };
 
+  const handleAddStaff = () => {
+    setSelectedStaff(null);
+    setShowEmployeeModal(true);
+  };
+
+  const handleEditStaff = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setShowEmployeeModal(true);
+  };
+
+  const handleSaveStaff = async (data: CreateUserDto | UpdateUserDto) => {
+    try {
+      if (selectedStaff) {
+        await updateUser(selectedStaff.id, data as UpdateUserDto);
+      } else {
+        await createUser(data as CreateUserDto);
+      }
+      await fetchStaffData();
+    } catch (error) {
+      console.error('Failed to save staff:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string) => {
+    try {
+      await deleteUser(staffId);
+      await fetchStaffData();
+      setShowEmployeeModal(false);
+    } catch (error) {
+      console.error('Failed to delete staff:', error);
+      throw error;
+    }
+  };
+
   const filteredStaff = staffList.filter(staff =>
     staff.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     staff.role?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -95,7 +137,10 @@ const StaffScreen = () => {
     const roleColor = getRoleColor(staff.role);
 
     return (
-      <View style={[styles.staffCard, { backgroundColor: COLORS.white }]}>
+      <TouchableOpacity
+        style={[styles.staffCard, { backgroundColor: COLORS.white }]}
+        onPress={() => handleEditStaff(staff)}
+      >
         <View style={styles.cardMain}>
           <View style={styles.staffLeft}>
             <View style={[styles.avatar, { backgroundColor: COLORS.containerGray }]}>
@@ -127,9 +172,23 @@ const StaffScreen = () => {
               <Icon name="cash-multiple" size={18} color={COLORS.primary} />
             </View>
             <View style={styles.statContent}>
-              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Today's Sales</Text>
+              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Sales</Text>
               <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
-                {staff.todaySales.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                {staff.todaySales.toFixed(0)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.statItem}>
+            <View style={[styles.statIconContainer, { backgroundColor: COLORS.containerGray }]}>
+              <Icon name="receipt" size={18} color={COLORS.orange} />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Orders</Text>
+              <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
+                {staff.todayOrderCount}
               </Text>
             </View>
           </View>
@@ -141,14 +200,14 @@ const StaffScreen = () => {
               <Icon name="clock-outline" size={18} color={COLORS.neutralGray} />
             </View>
             <View style={styles.statContent}>
-              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Hours Today</Text>
+              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Hours</Text>
               <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
                 {staff.todayHours.toFixed(1)}h
               </Text>
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -164,9 +223,9 @@ const StaffScreen = () => {
           </View>
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: COLORS.primary }]}
-            onPress={onRefresh}
+            onPress={handleAddStaff}
           >
-            <Icon name="refresh" size={22} color="#FFF" />
+            <Icon name="plus" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
 
@@ -297,7 +356,15 @@ const StaffScreen = () => {
 
         </ScrollView>
       )}
-    </ScreenContainer>
+
+      <EmployeeFormModal
+        visible={showEmployeeModal}
+        onClose={() => setShowEmployeeModal(false)}
+        onSubmit={handleSaveStaff}
+        onDelete={handleDeleteStaff}
+        initialData={selectedStaff as any}
+      />
+    </ScreenContainer >
   );
 };
 
