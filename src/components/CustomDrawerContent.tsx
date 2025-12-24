@@ -21,6 +21,7 @@ import LogoutModal from './common/LogoutModal';
 import { AppTheme } from '../theme/theme';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+import { clearTenant } from '../store/slices/authSlice';
 
 const CustomDrawerContent = (props: any) => {
   const { isDarkMode } = useTheme();
@@ -28,7 +29,7 @@ const CustomDrawerContent = (props: any) => {
   const styles = createStyles(COLORS);
   const theme = usePaperTheme() as unknown as AppTheme;
   const dispatch = useDispatch<AppDispatch>();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, selectedTenant } = useSelector((state: RootState) => state.auth);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = () => {
@@ -40,6 +41,10 @@ const CustomDrawerContent = (props: any) => {
     dispatch(logoutUser());
   };
 
+  const handleSwitchRestaurant = () => {
+    dispatch(clearTenant());
+  };
+
   const handleCancelLogout = () => {
     setShowLogoutModal(false);
   };
@@ -48,6 +53,13 @@ const CustomDrawerContent = (props: any) => {
     <View style={[styles.container, { backgroundColor: COLORS.background }]}>
       {/* Brand Header */}
       <View style={[styles.header, { backgroundColor: COLORS.white, borderBottomColor: COLORS.borderLight }]}>
+        <View style={styles.restaurantInfo}>
+          <Text style={[styles.restaurantName, { color: COLORS.primary }]}>{selectedTenant?.name || 'PayMint Business'}</Text>
+          <TouchableOpacity onPress={handleSwitchRestaurant} style={styles.switchLink}>
+            <Text style={styles.switchLinkText}>Switch Restaurant</Text>
+          </TouchableOpacity>
+        </View>
+        
         <View style={styles.profileSection}>
           <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary + '15' }]}>
             <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
@@ -116,6 +128,24 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingBottom: 24,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
+  },
+  restaurantInfo: {
+    marginBottom: 20,
+    gap: 4,
+  },
+  restaurantName: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  switchLink: {
+    alignSelf: 'flex-start',
+  },
+  switchLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+    color: '#64748B',
   },
   profileSection: {
     flexDirection: 'row',

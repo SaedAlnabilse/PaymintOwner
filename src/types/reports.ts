@@ -82,6 +82,7 @@ export interface HistoricalOrder {
   employeeId: string;
   refundReason: string | null;
   isRefunded: boolean;
+  items?: any[];
 }
 
 export interface TopSellingItem {

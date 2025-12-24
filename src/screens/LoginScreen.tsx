@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { RootState, AppDispatch } from '../store/store';
-import { loginUser, clearError, logout } from '../store/slices/authSlice';
+import { loginUser, clearError, logout, clearTenant } from '../store/slices/authSlice';
 
 import FormInput from '../components/auth/FormInput';
 import PrimaryButton from '../components/common/PrimaryButton';
@@ -35,7 +35,7 @@ const LoginScreen = () => {
   const [showAdminOnlyModal, setShowAdminOnlyModal] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
-  const { error: globalError } = useSelector((state: RootState) => state.auth);
+  const { error: globalError, selectedTenant } = useSelector((state: RootState) => state.auth);
 
   const validateInputs = () => {
     let hasError = false;
@@ -58,7 +58,7 @@ const LoginScreen = () => {
   const isAdminOrOwner = (role?: string): boolean => {
     if (!role) return false;
     const normalizedRole = role.toUpperCase();
-    return normalizedRole === 'ADMIN' || normalizedRole === 'OWNER';
+    return normalizedRole === 'ADMIN' || normalizedRole === 'OWNER' || normalizedRole === 'MANAGER';
   };
 
   const handleAdminOnlyDismiss = () => {
@@ -66,6 +66,10 @@ const LoginScreen = () => {
     setUsername('');
     setPassword('');
     dispatch(logout());
+  };
+
+  const handleSwitchBusiness = () => {
+    dispatch(clearTenant());
   };
 
   const handleLogin = async () => {
@@ -136,7 +140,7 @@ const LoginScreen = () => {
             </View>
             <Text style={styles.adminOnlyTitle}>Access Denied</Text>
             <Text style={styles.adminOnlyMessage}>
-              This application is restricted to Administrators and Owners only.
+              This application is restricted to Administrators, Owners, and Managers only.
             </Text>
             <TouchableOpacity
               style={styles.adminOnlyButton}
@@ -153,6 +157,7 @@ const LoginScreen = () => {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -184,6 +189,18 @@ const LoginScreen = () => {
                     </Text>
                   </View>
                 </View>
+
+                {selectedTenant && (
+                  <View style={styles.tenantBadge}>
+                    <View style={styles.tenantInfo}>
+                      <MaterialCommunityIcon name="store" size={18} color="#7CC39F" />
+                      <Text style={styles.tenantName} numberOfLines={1}>{selectedTenant.name}</Text>
+                    </View>
+                    <TouchableOpacity onPress={handleSwitchBusiness} style={styles.switchBtn}>
+                      <Text style={styles.switchBtnText}>Switch</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 <View style={styles.formContainer}>
                   <FormInput
@@ -258,6 +275,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 20,
+    paddingBottom: 50,
   },
   content: {
     width: '100%',
@@ -348,6 +366,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
+  },
+
+  // Tenant Badge
+  tenantBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tenantInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  tenantName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F1D2B',
+  },
+  switchBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#7CC39F',
+  },
+  switchBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#7CC39F',
   },
 
   // Form

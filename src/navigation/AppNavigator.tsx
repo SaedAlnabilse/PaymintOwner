@@ -7,6 +7,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme as usePaperTheme } from 'react-native-paper';
 
 import LoginScreen from '../screens/LoginScreen';
+import TenantSelectionScreen from '../screens/TenantSelectionScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import InventoryScreen from '../screens/InventoryScreen';
@@ -34,6 +35,7 @@ const DrawerNavigator = () => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
   const theme = usePaperTheme() as unknown as AppTheme;
+  const { selectedTenant } = useSelector((state: RootState) => state.auth);
 
   return (
     <Drawer.Navigator
@@ -41,14 +43,12 @@ const DrawerNavigator = () => {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         header: ({ navigation }) => {
-          // You might need to fetch data like store name or notifications here or pass them down
-          // For now using default placeholders or what's available
           return (
             <BackOfficeHeader
-              storeName="Paymint Store"
-              userName="Owner" // Ideally fetched from state
-              storeStatus="CLOSED" // Ideally fetched from state
-              onMenuPress={() => navigation.toggleDrawer()} // Toggle Drawer
+              storeName={selectedTenant?.name || "Paymint Store"}
+              userName="Owner"
+              storeStatus="CLOSED"
+              onMenuPress={() => navigation.toggleDrawer()}
               onNotificationsPress={() => navigation.navigate('Notifications')}
             />
           );
@@ -178,7 +178,7 @@ const DrawerNavigator = () => {
 
 const AppNavigator = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading, selectedTenant } = useSelector((state: RootState) => state.auth);
 
   // Handle app state changes for authentication
   useAppStateAuth();
@@ -200,7 +200,13 @@ const AppNavigator = () => {
       {isAuthenticated ? (
         <Stack.Screen name="Main" component={DrawerNavigator} />
       ) : (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <>
+          {!selectedTenant ? (
+            <Stack.Screen name="TenantSelection" component={TenantSelectionScreen} />
+          ) : (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          )}
+        </>
       )}
     </Stack.Navigator>
   );

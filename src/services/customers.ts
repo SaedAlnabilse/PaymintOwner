@@ -167,3 +167,65 @@ export const searchCustomers = async (query: string): Promise<Customer[]> => {
     const response = await apiClient.get(`/customers/search?q=${encodeURIComponent(query)}`);
     return response.data;
 };
+
+import { Share, Alert } from 'react-native';
+
+/**
+ * Share customers list as CSV text
+ */
+export const shareCustomersReport = async (customers: Customer[]) => {
+    try {
+        if (!customers || customers.length === 0) {
+            Alert.alert('No Data', 'There are no customers to export.');
+            return;
+        }
+
+        // 1. Create CSV Header
+        const headers = [
+            'Name',
+            'Phone',
+            'Email',
+            'Tier',
+            'Points',
+            'Total Visits',
+            'Total Spent (JOD)',
+            'Join Date'
+        ].join(',');
+
+        // 2. Create CSV Rows
+        const rows = customers.map(c => {
+            // Escape values that might contain commas
+            const name = `"${c.name.replace(/"/g, '""')}"`;
+            const email = c.email ? `"${c.email}"` : '';
+            
+            return [
+                name,
+                c.phone,
+                email,
+                c.tier,
+                c.points,
+                c.totalVisits,
+                c.totalSpent.toFixed(2),
+                new Date(c.joinDate).toISOString().split('T')[0]
+            ].join(',');
+        }).join('\n');
+
+        // 3. Combine
+        const csvContent = `${headers}\n${rows}`;
+
+        // 4. Share
+        await Share.share({
+            title: 'Customer List',
+            message: csvContent,
+        }, {
+            dialogTitle: 'Export Customer List',
+            subject: 'customers.csv'
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Export failed:', error);
+        Alert.alert('Export Failed', 'Could not share the list.');
+        return false;
+    }
+};

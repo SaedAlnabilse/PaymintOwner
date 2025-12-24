@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Platform, KeyboardAvoidingView, Pressable } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AppSettings } from '../../services/settings';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,68 +25,78 @@ const StoreProfileModal: React.FC<StoreProfileModalProps> = ({ visible, onClose,
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
-              <View style={styles.header}>
-                <Text style={styles.title}>Store Profile</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Icon name="close" size={24} color={COLORS.textPrimary} />
-                </TouchableOpacity>
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Store Profile</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Icon name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.scrollView} 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={true}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Logo Section */}
+              <View style={styles.logoSection}>
+                <View style={styles.logoContainer}>
+                  {settings.logo ? (
+                    <Image source={{ uri: settings.logo }} style={styles.logo} />
+                  ) : (
+                    <Icon name="store" size={40} color={COLORS.textTertiary} />
+                  )}
+                </View>
+                <Text style={styles.restaurantName}>{settings.restaurantName}</Text>
+                <Text style={styles.joinDate}>Joined {new Date(settings.createdAt).toLocaleDateString()}</Text>
               </View>
 
-              <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Logo Section */}
-                <View style={styles.logoSection}>
-                  <View style={styles.logoContainer}>
-                    {settings.logo ? (
-                      <Image source={{ uri: settings.logo }} style={styles.logo} />
-                    ) : (
-                      <Icon name="store" size={40} color={COLORS.textTertiary} />
-                    )}
+              {/* Details Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Business Hours</Text>
+                <View style={styles.row}>
+                  <View style={styles.rowItem}>
+                    <Icon name="clock-start" size={20} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.label}>Opening Time</Text>
+                      <Text style={styles.value}>{settings.openingTime}</Text>
+                    </View>
                   </View>
-                  <Text style={styles.restaurantName}>{settings.restaurantName}</Text>
-                  <Text style={styles.joinDate}>Joined {new Date(settings.createdAt).toLocaleDateString()}</Text>
+                  <View style={styles.rowItem}>
+                    <Icon name="clock-end" size={20} color={COLORS.error} />
+                    <View>
+                      <Text style={styles.label}>Closing Time</Text>
+                      <Text style={styles.value}>{settings.closingTime}</Text>
+                    </View>
+                  </View>
                 </View>
+              </View>
 
-                {/* Details Section */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Business Hours</Text>
-                  <View style={styles.row}>
-                    <View style={styles.rowItem}>
-                      <Icon name="clock-start" size={20} color={COLORS.primary} />
-                      <View>
-                        <Text style={styles.label}>Opening Time</Text>
-                        <Text style={styles.value}>{settings.openingTime}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.rowItem}>
-                      <Icon name="clock-end" size={20} color={COLORS.error} />
-                      <View>
-                        <Text style={styles.label}>Closing Time</Text>
-                        <Text style={styles.value}>{settings.closingTime}</Text>
-                      </View>
-                    </View>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Additional Info</Text>
+                <View style={styles.infoItem}>
+                  <Icon name="message-text-outline" size={20} color={COLORS.textSecondary} />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.label}>Farewell Message</Text>
+                    <Text style={styles.value}>{settings.farewellMessage || 'None set'}</Text>
                   </View>
                 </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Additional Info</Text>
-                  <View style={styles.infoItem}>
-                    <Icon name="message-text-outline" size={20} color={COLORS.textSecondary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.label}>Farewell Message</Text>
-                      <Text style={styles.value}>{settings.farewellMessage || 'None set'}</Text>
-                    </View>
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -97,13 +108,25 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  keyboardAvoidingView: {
     width: '90%',
-    maxWidth: 400,
+    maxWidth: 420,
+    maxHeight: '85%',
+  },
+  modalContent: {
+    width: '100%',
     backgroundColor: colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
-    maxHeight: '80%',
+    maxHeight: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -114,15 +137,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   closeButton: {
     padding: 4,
   },
-  content: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   logoSection: {
     alignItems: 'center',

@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getStaffOverview, StaffMember as StaffMemberType } from '../services/dashboard';
 import { createUser, updateUser, deleteUser, CreateUserDto, UpdateUserDto } from '../services/users';
 import EmployeeFormModal from '../components/staff/EmployeeFormModal';
+import ShiftHistoryModal from '../components/staff/ShiftHistoryModal';
 
 // Use the optimized StaffMember type from dashboard service
 interface StaffMember extends StaffMemberType {
@@ -33,6 +34,9 @@ const StaffScreen = () => {
   // Modal State
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedHistoryStaff, setSelectedHistoryStaff] = useState<{id: string, name: string} | null>(null);
 
   const getRoleColor = (role: string) => {
     switch (role?.toLowerCase()) {
@@ -207,6 +211,18 @@ const StaffScreen = () => {
             </View>
           </View>
         </View>
+        
+        {/* History Button */}
+        <TouchableOpacity 
+          style={[styles.historyButton, { borderTopColor: COLORS.borderLight }]}
+          onPress={() => {
+            setSelectedHistoryStaff({ id: staff.id, name: staff.name });
+            setShowHistoryModal(true);
+          }}
+        >
+          <Text style={[styles.historyButtonText, { color: COLORS.primary }]}>View Shift History</Text>
+          <Icon name="chevron-right" size={16} color={COLORS.primary} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -363,6 +379,13 @@ const StaffScreen = () => {
         onSubmit={handleSaveStaff}
         onDelete={handleDeleteStaff}
         initialData={selectedStaff as any}
+      />
+
+      <ShiftHistoryModal
+        visible={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        staffId={selectedHistoryStaff?.id || ''}
+        staffName={selectedHistoryStaff?.name || ''}
       />
     </ScreenContainer >
   );
@@ -700,10 +723,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  leaderboardSales: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
-
-export default StaffScreen;
+    leaderboardSales: {
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    historyButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      gap: 4,
+    },
+    historyButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+  });
+  
+  export default StaffScreen;
+  

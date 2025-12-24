@@ -31,6 +31,7 @@ import {
   fetchOrderDetails,
   getLiveShiftReport,
   fetchUserName,
+  shareOrdersReport,
 } from '../services/reports';
 import {
   HistoricalOrder,
@@ -131,7 +132,7 @@ const ReportsScreen = () => {
   }, 0);
 
   // Filter State
-  const [selectedRange, setSelectedRange] = useState<'today' | 'last7' | 'last30' | 'thisMonth' | 'custom'>('today');
+  const [selectedRange, setSelectedRange] = useState<'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'custom'>('today');
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [selectedShift, setSelectedShift] = useState<string | null>(null);
   const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'sales' | 'refunds' | 'void'>('all');
@@ -448,6 +449,16 @@ const ReportsScreen = () => {
     } finally {
       setIsLoadingOrderDetails(false);
     }
+  };
+
+  const handleExport = async () => {
+    let periodLabel = 'Report';
+    if (selectedRange === 'today') periodLabel = moment().format('YYYY-MM-DD');
+    else if (selectedRange === 'yesterday') periodLabel = `Yesterday ${moment().subtract(1, 'd').format('YYYY-MM-DD')}`;
+    else if (selectedRange === 'thisMonth') periodLabel = moment().format('MMMM YYYY');
+    
+    // Pass filteredOrders to export specifically what the user sees
+    await shareOrdersReport(filteredOrders, periodLabel);
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -1129,7 +1140,10 @@ const ReportsScreen = () => {
           <View style={styles.content}>
             <View style={[styles.sectionHeader, { marginTop: 0 }]}>
               <Text style={styles.sectionTitle}>Receipts</Text>
-              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                onPress={handleExport}
+              >
                 <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Export CSV</Text>
                 <Icon name="download" size={16} color={COLORS.primary} />
               </TouchableOpacity>

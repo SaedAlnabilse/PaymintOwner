@@ -54,9 +54,16 @@ apiClient.interceptors.request.use(
   config => {
     const state = store.getState();
     const token = state.auth.token;
+    const tenantSlug = state.auth.selectedTenant?.slug;
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    if (tenantSlug) {
+      config.headers['x-tenant-slug'] = tenantSlug;
+    }
+
     return config;
   },
   error => {

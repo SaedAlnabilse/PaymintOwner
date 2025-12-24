@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Pressable,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -98,47 +100,55 @@ const PayInPayOutLogModal: React.FC<PayInPayOutLogModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {type === 'PAY_IN'
-                ? 'Pay In Log'
-                : type === 'PAY_OUT'
-                  ? 'Pay Out Log'
-                  : 'Pay Log'}
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color={COLORS.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {type === 'PAY_IN'
+                  ? 'Pay In Log'
+                  : type === 'PAY_OUT'
+                    ? 'Pay Out Log'
+                    : 'Pay Log'}
+              </Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Icon name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-            >
-              {filteredLogs.length > 0 ? (
-                filteredLogs.map((item) => (
-                  <LogItem key={item.id} item={item} COLORS={COLORS} />
-                ))
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
-                  <Text style={styles.emptyText}>No Records Found</Text>
-                </View>
-              )}
-            </ScrollView>
-          )}
-        </View>
+
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+                keyboardShouldPersistTaps="handled"
+              >
+                {filteredLogs.length > 0 ? (
+                  filteredLogs.map((item) => (
+                    <LogItem key={item.id} item={item} COLORS={COLORS} />
+                  ))
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
+                    <Text style={styles.emptyText}>No Records Found</Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -154,13 +164,22 @@ const createStyles = (colors: any) => StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  modalContent: {
+  keyboardAvoidingView: {
     width: '90%',
     maxWidth: 500,
-    height: '80%',
+    maxHeight: '85%',
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '100%',
     backgroundColor: colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -171,15 +190,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   closeButton: {
     padding: 4,
   },
   loadingContainer: {
-    flex: 1,
+    height: 300,
     justifyContent: 'center',
     alignItems: 'center',
   },

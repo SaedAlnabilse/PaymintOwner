@@ -1,8 +1,16 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, LoginCredentials } from '../../services/authService';
+import { RootState } from '../store';
 
 const APP_BACKGROUND_TIME_KEY = '@app_background_time';
+
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  logo?: string;
+}
 
 interface AuthState {
   token: string | null;
@@ -10,6 +18,7 @@ interface AuthState {
   isLoading: boolean;
   user: { id: string; name: string; role: string; email: string } | null;
   error: string | null;
+  selectedTenant: Tenant | null;
 }
 
 const initialState: AuthState = {
@@ -18,6 +27,7 @@ const initialState: AuthState = {
   isLoading: true,
   user: null,
   error: null,
+  selectedTenant: null,
 };
 
 // Helper function to clear background time
@@ -31,9 +41,19 @@ const clearBackgroundTime = async () => {
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
+  async (credentials: Omit<LoginCredentials, 'tenantSlug'>, { getState, rejectWithValue }) => {
     try {
-      const response = await authService.login(credentials);
+      const state = getState() as RootState;
+      const tenantSlug = state.auth.selectedTenant?.slug;
+
+      if (!tenantSlug) {
+        return rejectWithValue('No restaurant connected. Please connect first.');
+      }
+
+      const response = await authService.login({
+        ...credentials,
+        tenantSlug
+      });
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
@@ -60,38 +80,36 @@ export const checkAuthStatus = createAsyncThunk(
       console.log('🔐 Checking authentication status...');
       const token = await authService.getToken();
       const user = await authService.getUser();
+      const tenant = await authService.getTenant();
 
       if (!token || !user) {
         console.log('🔐 No stored session found');
-        return rejectWithValue('No stored session found');
+        return { token: null, user: null, tenant };
       }
 
       console.log('🔐 Found stored session, verifying token validity...');
-      // Try to verify token is still valid by making a test API call
+      // Try to verify token is still valid
       try {
         const profileResponse = await authService.getProfile();
         console.log('🔐 Token is valid, user authenticated');
         return {
           token,
-          user: profileResponse
+          user: profileResponse,
+          tenant
         };
       } catch (apiError: any) {
-        // Check if this is a 401 (unauthorized) - token is genuinely invalid
         const status = apiError.response?.status;
         if (status === 401) {
-          console.log('🔐 Token is invalid (401), clearing stored data');
-          await authService.logout();
-          return rejectWithValue('Session expired');
+          console.log('🔐 Token is invalid (401), clearing stored user data');
+          await authService.clearToken();
+          await authService.clearUser();
+          return { token: null, user: null, tenant };
         }
 
-        // For any other error (network, timeout, server error),
-        // KEEP the user logged in with their stored credentials
-        // The API interceptor will handle 401s if needed later
-        console.log('🔐 API check failed but not 401, keeping user logged in with stored data');
-        console.log('🔐 Error details:', apiError.message);
         return {
           token,
-          user
+          user,
+          tenant
         };
       }
     } catch (error: any) {
@@ -115,6 +133,20 @@ const authSlice = createSlice({
     clearError(state) {
       state.error = null;
     },
+    selectTenant(state, action: PayloadAction<Tenant>) {
+      state.selectedTenant = action.payload;
+      authService.storeTenant(action.payload);
+    },
+    clearTenant(state) {
+      state.selectedTenant = null;
+      authService.clearTenant();
+      // Also logout if tenant cleared
+      state.token = null;
+      state.user = null;
+      state.isAuthenticated = false;
+      authService.clearToken();
+      authService.clearUser();
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -124,16 +156,14 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         const userRole = action.payload.user?.role?.toUpperCase();
-        const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER';
+        const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER';
 
         state.token = action.payload.access_token;
         state.user = action.payload.user;
-        // Only authenticate if user is admin or owner
         state.isAuthenticated = isAdminOrOwner;
         state.isLoading = false;
         state.error = isAdminOrOwner ? null : 'This app is for administrators only';
 
-        // Clear any stored background time since user just logged in
         if (isAdminOrOwner) {
           clearBackgroundTime();
         }
@@ -148,7 +178,8 @@ const authSlice = createSlice({
       .addCase(checkAuthStatus.fulfilled, (state, action) => {
         state.token = action.payload.token;
         state.user = action.payload.user;
-        state.isAuthenticated = true;
+        state.selectedTenant = action.payload.tenant;
+        state.isAuthenticated = !!action.payload.token;
         state.isLoading = false;
       })
       .addCase(checkAuthStatus.rejected, (state) => {
@@ -157,7 +188,6 @@ const authSlice = createSlice({
         state.token = null;
         state.user = null;
       })
-      // Logout thunk handler
       .addCase(logoutUser.fulfilled, (state) => {
         state.token = null;
         state.user = null;
@@ -168,5 +198,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError } = authSlice.actions;
+export const { logout, clearError, selectTenant, clearTenant } = authSlice.actions;
 export default authSlice.reducer;

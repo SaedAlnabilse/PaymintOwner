@@ -5,6 +5,7 @@ export interface Item {
   name: string;
   description?: string;
   price: number;
+  costPrice?: number; // Added field
   categoryId: string;
   isAvailable: boolean;
   trackStock: boolean;
@@ -21,6 +22,7 @@ export interface CreateItemDto {
   name: string;
   description?: string;
   price: number;
+  costPrice?: number; // Added field
   categoryId: string;
   isAvailable?: boolean;
   trackStock?: boolean;
@@ -32,6 +34,7 @@ export interface UpdateItemDto {
   name?: string;
   description?: string;
   price?: number;
+  costPrice?: number; // Added field
   categoryId?: string;
   isAvailable?: boolean;
   trackStock?: boolean;

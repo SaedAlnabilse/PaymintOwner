@@ -170,26 +170,6 @@ const NotificationsScreen = () => {
   const systemUpdate = useSelector((state: RootState) => state.notifications.systemUpdate);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Clear badge when user enters the notification page
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', async () => {
-      console.log('📭 User entered notifications page, marking cash alerts as read...');
-
-      // Mark all cash alerts as read in one API call
-      try {
-        await dispatch(markAllCashAlertsAsRead()).unwrap();
-        console.log('✅ All cash alerts marked as read');
-      } catch (error) {
-        console.error('Failed to mark cash alerts as read:', error);
-      }
-
-      // Reload notifications to recalculate unread count
-      await loadNotifications();
-    });
-
-    return unsubscribe;
-  }, [navigation, dispatch, loadNotifications]);
-
   const loadNotifications = useCallback(async () => {
     try {
       // Fetch cash alerts from dedicated endpoint for better performance
@@ -210,6 +190,26 @@ const NotificationsScreen = () => {
       console.error('❌ Failed to load notifications:', error);
     }
   }, [dispatch]);
+
+  // Clear badge when user enters the notification page
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', async () => {
+      console.log('📭 User entered notifications page, marking cash alerts as read...');
+
+      // Mark all cash alerts as read in one API call
+      try {
+        await dispatch(markAllCashAlertsAsRead()).unwrap();
+        console.log('✅ All cash alerts marked as read');
+      } catch (error) {
+        console.error('Failed to mark cash alerts as read:', error);
+      }
+
+      // Reload notifications to recalculate unread count
+      await loadNotifications();
+    });
+
+    return unsubscribe;
+  }, [navigation, dispatch, loadNotifications]);
 
   // Track previous cash alerts to detect new ones
   const [previousCashAlertIds, setPreviousCashAlertIds] = useState<Set<string>>(new Set());

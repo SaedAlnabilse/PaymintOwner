@@ -4,10 +4,12 @@ import { pushNotificationService } from './pushNotificationService';
 
 const TOKEN_KEY = '@owner_access_token';
 const USER_KEY = '@owner_user';
+const TENANT_KEY = '@owner_tenant';
 
 export interface LoginCredentials {
   username: string;
   password: string;
+  tenantSlug: string;
 }
 
 export interface LoginResponse {
@@ -38,6 +40,7 @@ class AuthService {
       const response = await apiClient.post('/api/auth/login', {
         username: credentials.username,
         password: credentials.password,
+        tenantSlug: credentials.tenantSlug,
       });
 
       const data: LoginResponse = response.data;
@@ -161,6 +164,33 @@ class AuthService {
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
     return !!token;
+  }
+
+  async storeTenant(tenant: any): Promise<void> {
+    try {
+      if (!tenant) return;
+      await AsyncStorage.setItem(TENANT_KEY, JSON.stringify(tenant));
+    } catch (error) {
+      console.error('Failed to store tenant:', error);
+    }
+  }
+
+  async getTenant(): Promise<any | null> {
+    try {
+      const tenantJson = await AsyncStorage.getItem(TENANT_KEY);
+      return tenantJson ? JSON.parse(tenantJson) : null;
+    } catch (error) {
+      console.error('Failed to get tenant:', error);
+      return null;
+    }
+  }
+
+  async clearTenant(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(TENANT_KEY);
+    } catch (error) {
+      console.error('Failed to clear tenant:', error);
+    }
   }
 }
 

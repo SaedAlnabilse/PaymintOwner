@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { getColors } from '../constants/colors';
@@ -203,12 +203,12 @@ const PromotionsScreen = () => {
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={() => setModalVisible(false)} />
+        
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalKeyboardView}
         >
           <View style={[styles.modalContent, { backgroundColor: COLORS.cardBackground }]}>
-            {/* Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                 <Icon name="close" size={24} color={COLORS.textSecondary} />
@@ -219,60 +219,68 @@ const PromotionsScreen = () => {
               <View style={{ width: 24 }} />
             </View>
 
-            {/* Form */}
-            <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: COLORS.textSecondary }]}>Discount Name</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { backgroundColor: COLORS.background, color: COLORS.textPrimary, borderColor: errors.name ? COLORS.red : COLORS.borderLight }
-                  ]}
-                  placeholder="e.g., Happy Hour, Staff Discount"
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={discountName}
-                  onChangeText={(text) => {
-                    setDiscountName(text);
-                    if (errors.name) setErrors({ ...errors, name: undefined });
-                  }}
-                />
-                {errors.name && <Text style={[styles.errorText, { color: COLORS.red }]}>{errors.name}</Text>}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: COLORS.textSecondary }]}>Discount Percentage</Text>
-                <View style={[
-                  styles.percentageInputContainer,
-                  { backgroundColor: COLORS.background, borderColor: errors.percentage ? COLORS.red : COLORS.borderLight }
-                ]}>
+            <ScrollView 
+              style={styles.scrollView} 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={true}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Form */}
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: COLORS.textSecondary }]}>Discount Name</Text>
                   <TextInput
-                    style={[styles.percentageInput, { color: COLORS.textPrimary }]}
-                    placeholder="10"
+                    style={[
+                      styles.input,
+                      { backgroundColor: COLORS.background, color: COLORS.textPrimary, borderColor: errors.name ? COLORS.red : COLORS.borderLight }
+                    ]}
+                    placeholder="e.g., Happy Hour, Staff Discount"
                     placeholderTextColor={COLORS.textSecondary}
-                    value={discountPercentage}
+                    value={discountName}
                     onChangeText={(text) => {
-                      setDiscountPercentage(text.replace(/[^0-9.]/g, ''));
-                      if (errors.percentage) setErrors({ ...errors, percentage: undefined });
+                      setDiscountName(text);
+                      if (errors.name) setErrors({ ...errors, name: undefined });
                     }}
-                    keyboardType="numeric"
                   />
-                  <Text style={[styles.percentageSymbol, { color: COLORS.textSecondary }]}>%</Text>
+                  {errors.name && <Text style={[styles.errorText, { color: COLORS.red }]}>{errors.name}</Text>}
                 </View>
-                {errors.percentage && <Text style={[styles.errorText, { color: COLORS.red }]}>{errors.percentage}</Text>}
-              </View>
 
-              {/* Preview */}
-              {discountName && discountPercentage && !isNaN(parseFloat(discountPercentage)) && (
-                <View style={[styles.preview, { backgroundColor: COLORS.primary + '10' }]}>
-                  <Icon name="eye" size={20} color={COLORS.primary} />
-                  <Text style={[styles.previewText, { color: COLORS.textPrimary }]}>
-                    Preview: <Text style={{ fontWeight: 'bold', color: COLORS.primary }}>
-                      {discountName} - {discountPercentage}% OFF
-                    </Text>
-                  </Text>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: COLORS.textSecondary }]}>Discount Percentage</Text>
+                  <View style={[
+                    styles.percentageInputContainer,
+                    { backgroundColor: COLORS.background, borderColor: errors.percentage ? COLORS.red : COLORS.borderLight }
+                  ]}>
+                    <TextInput
+                      style={[styles.percentageInput, { color: COLORS.textPrimary }]}
+                      placeholder="10"
+                      placeholderTextColor={COLORS.textSecondary}
+                      value={discountPercentage}
+                      onChangeText={(text) => {
+                        setDiscountPercentage(text.replace(/[^0-9.]/g, ''));
+                        if (errors.percentage) setErrors({ ...errors, percentage: undefined });
+                      }}
+                      keyboardType="numeric"
+                    />
+                    <Text style={[styles.percentageSymbol, { color: COLORS.textSecondary }]}>%</Text>
+                  </View>
+                  {errors.percentage && <Text style={[styles.errorText, { color: COLORS.red }]}>{errors.percentage}</Text>}
                 </View>
-              )}
-            </View>
+
+                {/* Preview */}
+                {discountName && discountPercentage && !isNaN(parseFloat(discountPercentage)) && (
+                  <View style={[styles.preview, { backgroundColor: COLORS.primary + '10' }]}>
+                    <Icon name="eye" size={20} color={COLORS.primary} />
+                    <Text style={[styles.previewText, { color: COLORS.textPrimary }]}>
+                      Preview: <Text style={{ fontWeight: 'bold', color: COLORS.primary }}>
+                        {discountName} - {discountPercentage}% OFF
+                      </Text>
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
 
             {/* Actions */}
             <View style={styles.modalActions}>
@@ -554,6 +562,8 @@ const styles = StyleSheet.create({
   modalContent: {
     borderRadius: 20,
     padding: 24,
+    maxHeight: '100%',
+    flexShrink: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
@@ -570,11 +580,17 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  scrollView: {
+    // flex: 1 removed to allow self-sizing
+  },
+  scrollContent: {
+    paddingBottom: 12,
   },
   form: {
-    gap: 20,
+    gap: 16,
   },
   inputGroup: {
     gap: 8,
@@ -587,7 +603,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
-    fontSize: 16,
+    fontSize: 15,
   },
   percentageInputContainer: {
     flexDirection: 'row',
@@ -599,10 +615,10 @@ const styles = StyleSheet.create({
   percentageInput: {
     flex: 1,
     padding: 14,
-    fontSize: 16,
+    fontSize: 15,
   },
   percentageSymbol: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   errorText: {
@@ -612,7 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 14,
+    padding: 12,
     borderRadius: 10,
   },
   previewText: {
@@ -621,7 +637,10 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 28,
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
   cancelBtn: {
     flex: 1,
@@ -629,6 +648,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelBtnText: {
     fontSize: 15,
@@ -639,11 +659,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBtnText: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

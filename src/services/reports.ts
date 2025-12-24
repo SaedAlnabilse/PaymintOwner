@@ -402,3 +402,71 @@ export const getHourlySales = async (
     return Array.from({ length: 24 }, (_, hour) => ({ hour, sales: 0, orderCount: 0 }));
   }
 };
+
+import { Share, Alert } from 'react-native';
+import moment from 'moment-timezone';
+
+/**
+ * Share orders report as CSV text
+ */
+export const shareOrdersReport = async (orders: HistoricalOrder[], periodName: string = 'Report') => {
+  try {
+    if (!orders || orders.length === 0) {
+      Alert.alert('No Data', 'There are no orders to export for this period.');
+      return;
+    }
+
+    // 1. Create CSV Header
+    const headers = [
+      'Order No',
+      'Date',
+      'Time',
+      'Total (JOD)',
+      'Status',
+      'Items',
+      'Employee',
+      'Payment'
+    ].join(',');
+
+    // 2. Create CSV Rows
+    const rows = orders.map(order => {
+      const date = moment(order.createdAt);
+      // Clean up item names to avoid CSV breaking
+      const itemsSummary = (order.items || [])
+        .map((i: any) => `${i.quantity}x ${i.name}`)
+        .join('; ')
+        .replace(/,/g, ' '); // Remove commas from item names
+
+      return [
+        order.orderNumber,
+        date.format('YYYY-MM-DD'),
+        date.format('HH:mm'),
+        order.total.toFixed(2),
+        order.status,
+        `"${itemsSummary}"`, // Quote items to handle special chars
+        order.employeeName || 'Unknown',
+        order.paymentMethod || 'CASH'
+      ].join(',');
+    }).join('\n');
+
+    // 3. Combine
+    const csvContent = `${headers}\n${rows}`;
+
+    // 4. Share
+    const title = `Sales Report - ${periodName}`;
+    
+    await Share.share({
+      title: title,
+      message: csvContent, 
+    }, {
+      dialogTitle: 'Export Sales Report',
+      subject: `${title}.csv`
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Export failed:', error);
+    Alert.alert('Export Failed', 'Could not share the report.');
+    return false;
+  }
+};

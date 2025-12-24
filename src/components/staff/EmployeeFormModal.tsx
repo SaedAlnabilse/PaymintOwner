@@ -6,12 +6,15 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    ScrollView,
     Alert,
     Platform,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    KeyboardAvoidingView,
+    ActivityIndicator,
+    Pressable
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getColors } from '../../constants/colors';
@@ -151,12 +154,18 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     return (
         <Modal
             visible={visible}
-            animationType="slide"
+            animationType="fade"
             transparent
             onRequestClose={onClose}
+            statusBarTranslucent={true}
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalOverlay}>
+            <View style={styles.modalOverlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
+                
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.keyboardAvoidingView}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.header}>
                             <Text style={styles.title}>{initialData ? 'Edit Employee' : 'New Employee'}</Text>
@@ -165,8 +174,13 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-
+                        <ScrollView 
+                            style={styles.scrollView} 
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={true}
+                            bounces={true}
+                            keyboardShouldPersistTaps="handled"
+                        >
                             {/* Name */}
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Full Name</Text>
@@ -258,8 +272,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                     secureTextEntry
                                 />
                             </View>
-
-                            <View style={{ height: 40 }} />
                         </ScrollView>
 
                         <View style={styles.footer}>
@@ -274,22 +286,29 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                             )}
 
                             <TouchableOpacity
-                                style={[styles.submitButton, { flex: initialData ? 1 : undefined, marginLeft: initialData ? 12 : 0 }]}
+                                style={[styles.cancelButton, { borderColor: COLORS.border }]}
+                                onPress={onClose}
+                            >
+                                <Text style={[styles.cancelButtonText, { color: COLORS.textSecondary }]}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.submitButton, { backgroundColor: COLORS.primary }]}
                                 onPress={handleSubmit}
                                 disabled={loading}
                             >
                                 {loading ? (
-                                    <Text style={styles.submitButtonText}>Saving...</Text>
+                                    <ActivityIndicator color="#FFF" size="small" />
                                 ) : (
                                     <Text style={styles.submitButtonText}>
-                                        {initialData ? 'Save Changes' : 'Add Employee'}
+                                        {initialData ? 'Save' : 'Add'}
                                     </Text>
                                 )}
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
+            </View>
         </Modal>
     );
 };
@@ -298,127 +317,148 @@ const createStyles = (colors: any) => StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    keyboardAvoidingView: {
+        width: '90%',
+        maxWidth: 500,
+        maxHeight: '85%',
     },
     modalContent: {
         backgroundColor: colors.surface,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        height: '85%',
+        borderRadius: 20,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        width: '100%',
+        maxHeight: '100%',
+        flexShrink: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 10,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: '800',
         color: colors.textPrimary,
     },
     closeButton: {
-        padding: 8,
-        backgroundColor: colors.containerGray,
-        borderRadius: 50,
+        padding: 4,
+    },
+    scrollView: {
+        // flex: 1 removed to allow self-sizing
+    },
+    scrollContent: {
+        paddingBottom: 20,
     },
     formContainer: {
-        flex: 1,
+        marginBottom: 20,
     },
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
         color: colors.textSecondary,
         marginBottom: 8,
-        marginLeft: 4,
     },
     input: {
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 15,
         color: colors.textPrimary,
     },
     dropdownButton: {
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     dropdownButtonText: {
-        fontSize: 16,
+        fontSize: 15,
         color: colors.textPrimary,
     },
     dropdownList: {
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        marginTop: -16,
-        marginBottom: 20,
-        paddingVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
+        borderRadius: 10,
+        marginTop: -12,
+        marginBottom: 16,
+        paddingVertical: 4,
+        elevation: 5,
         zIndex: 10,
     },
     dropdownItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
     },
     dropdownItemText: {
-        fontSize: 15,
+        fontSize: 14,
         color: colors.textSecondary,
     },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 10,
         paddingTop: 16,
         borderTopWidth: 1,
         borderTopColor: colors.border,
     },
     deleteButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
+        width: 48,
+        height: 48,
+        borderRadius: 10,
         backgroundColor: colors.errorBg,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    submitButton: {
+    cancelButton: {
         flex: 1,
-        backgroundColor: colors.primary,
-        height: 56,
-        borderRadius: 16,
+        height: 48,
+        borderRadius: 10,
+        borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 6,
+    },
+    cancelButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    submitButton: {
+        flex: 1,
+        height: 48,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     submitButtonText: {
         color: '#FFF',
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '700',
     },
 });

@@ -6,14 +6,16 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    ScrollView,
     Switch,
     Alert,
     KeyboardAvoidingView,
     Platform,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    ActivityIndicator,
+    Pressable
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Item, CreateItemDto, UpdateItemDto } from '../../services/itemsService';
 import { useTheme } from '../../context/ThemeContext';
@@ -47,6 +49,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
 
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
+    const [costPrice, setCostPrice] = useState(''); // Added state
     const [categoryId, setCategoryId] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState<'item' | 'addon'>('item');
@@ -62,6 +65,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
             if (initialData) {
                 setName(initialData.name);
                 setPrice(initialData.price.toString());
+                setCostPrice(initialData.costPrice?.toString() || ''); // Init cost price
                 setCategoryId(initialData.categoryId);
                 setDescription(initialData.description || '');
                 setType(initialData.type?.toLowerCase() === 'addon' ? 'addon' : 'item');
@@ -72,6 +76,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                 // Reset form for create
                 setName('');
                 setPrice('');
+                setCostPrice('');
                 setCategoryId(categories.length > 0 ? categories[0].id : '');
                 setDescription('');
                 setType('item');
@@ -94,6 +99,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
             const payload: any = {
                 name,
                 price: parseFloat(price),
+                costPrice: costPrice ? parseFloat(costPrice) : undefined, // Add to payload
                 categoryId,
                 description,
                 type: type as 'item' | 'addon', // Fix type mismatch
@@ -146,12 +152,18 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
     return (
         <Modal
             visible={visible}
-            animationType="slide"
+            animationType="fade"
             transparent
             onRequestClose={onClose}
+            statusBarTranslucent={true}
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalOverlay}>
+            <View style={styles.modalOverlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
+                
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.keyboardAvoidingView}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.header}>
                             <Text style={styles.title}>{initialData ? 'Edit Item' : 'New Item'}</Text>
@@ -160,7 +172,13 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+                        <ScrollView 
+                            style={styles.scrollView} 
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={true}
+                            bounces={true}
+                            keyboardShouldPersistTaps="handled"
+                        >
                             {/* Type Selection */}
                             <View style={styles.typeContainer}>
                                 <TouchableOpacity
@@ -191,10 +209,10 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                                 />
                             </View>
 
-                            {/* Price & Category Row */}
+                            {/* Price & Cost Price Row */}
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-                                    <Text style={styles.label}>Price</Text>
+                                    <Text style={styles.label}>Selling Price</Text>
                                     <View style={styles.priceInputContainer}>
                                         <Text style={styles.currencyPrefix}>JOD</Text>
                                         <TextInput
@@ -209,17 +227,33 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                                 </View>
 
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-                                    <Text style={styles.label}>Category</Text>
-                                    <TouchableOpacity
-                                        style={styles.dropdownButton}
-                                        onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                                    >
-                                        <Text style={styles.dropdownButtonText} numberOfLines={1}>
-                                            {categories.find(c => c.id === categoryId)?.name || 'Select'}
-                                        </Text>
-                                        <Icon name="chevron-down" size={20} color={COLORS.textSecondary} />
-                                    </TouchableOpacity>
+                                    <Text style={styles.label}>Cost Price</Text>
+                                    <View style={styles.priceInputContainer}>
+                                        <Text style={styles.currencyPrefix}>JOD</Text>
+                                        <TextInput
+                                            style={styles.priceInput}
+                                            value={costPrice}
+                                            onChangeText={setCostPrice}
+                                            keyboardType="decimal-pad"
+                                            placeholder="0.00"
+                                            placeholderTextColor={COLORS.textTertiary}
+                                        />
+                                    </View>
                                 </View>
+                            </View>
+
+                            {/* Category Row */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Category</Text>
+                                <TouchableOpacity
+                                    style={styles.dropdownButton}
+                                    onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                                >
+                                    <Text style={styles.dropdownButtonText} numberOfLines={1}>
+                                        {categories.find(c => c.id === categoryId)?.name || 'Select Category'}
+                                    </Text>
+                                    <Icon name="chevron-down" size={20} color={COLORS.textSecondary} />
+                                </TouchableOpacity>
                             </View>
 
                             {/* Category Dropdown Content */}
@@ -264,7 +298,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                             <View style={styles.switchRow}>
                                 <View>
                                     <Text style={styles.switchLabel}>Track Stock</Text>
-                                    <Text style={styles.switchSubLabel}>Manage inventory count for this item</Text>
+                                    <Text style={styles.switchSubLabel}>Manage inventory count</Text>
                                 </View>
                                 <Switch
                                     value={trackStock}
@@ -289,7 +323,7 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                                         />
                                     </View>
                                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-                                        <Text style={styles.label}>Low Stock Alert</Text>
+                                        <Text style={styles.label}>Low Stock</Text>
                                         <TextInput
                                             style={styles.input}
                                             value={lowStock}
@@ -301,8 +335,6 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                                     </View>
                                 </View>
                             )}
-
-                            <View style={{ height: 40 }} />
                         </ScrollView>
 
                         <View style={styles.footer}>
@@ -317,22 +349,29 @@ const ItemFormModal: React.FC<ItemFormModalProps> = ({
                             )}
 
                             <TouchableOpacity
-                                style={[styles.submitButton, { flex: initialData ? 1 : undefined, marginLeft: initialData ? 12 : 0 }]}
+                                style={[styles.cancelButton, { borderColor: COLORS.border }]}
+                                onPress={onClose}
+                            >
+                                <Text style={[styles.cancelButtonText, { color: COLORS.textSecondary }]}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.submitButton, { backgroundColor: COLORS.primary }]}
                                 onPress={handleSubmit}
                                 disabled={loading}
                             >
                                 {loading ? (
-                                    <Text style={styles.submitButtonText}>Saving...</Text>
+                                    <ActivityIndicator color="#FFF" size="small" />
                                 ) : (
                                     <Text style={styles.submitButtonText}>
-                                        {initialData ? 'Save Changes' : 'Create Item'}
+                                        {initialData ? 'Save' : 'Add'}
                                     </Text>
                                 )}
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
+            </View>
         </Modal>
     );
 };
@@ -341,95 +380,107 @@ const createStyles = (colors: any) => StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    keyboardAvoidingView: {
+        width: '90%',
+        maxWidth: 500,
+        maxHeight: '85%',
     },
     modalContent: {
         backgroundColor: colors.surface,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        height: '92%',
+        borderRadius: 20,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        width: '100%',
+        maxHeight: '100%',
+        flexShrink: 1, // Allow it to shrink if needed but also expand to content
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 10,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: '800',
         color: colors.textPrimary,
     },
     closeButton: {
-        padding: 8,
-        backgroundColor: colors.containerGray,
-        borderRadius: 50,
+        padding: 4,
+    },
+    scrollView: {
+        // flex: 1 removed to allow self-sizing
+    },
+    scrollContent: {
+        paddingBottom: 20,
     },
     formContainer: {
-        flex: 1,
+        marginBottom: 20,
     },
     typeContainer: {
         flexDirection: 'row',
-        marginBottom: 24,
+        marginBottom: 20,
         backgroundColor: colors.containerGray,
         padding: 4,
-        borderRadius: 16,
+        borderRadius: 12,
     },
     typeButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
         gap: 8,
     },
     typeButtonActive: {
         backgroundColor: colors.primary,
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 4,
     },
     typeText: {
         fontWeight: '600',
         color: colors.textSecondary,
-        fontSize: 15,
+        fontSize: 14,
     },
     typeTextActive: {
         color: '#FFF',
         fontWeight: '700',
     },
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
         color: colors.textSecondary,
         marginBottom: 8,
-        marginLeft: 4,
     },
     input: {
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 15,
         color: colors.textPrimary,
     },
     textArea: {
-        height: 100,
+        height: 80,
         textAlignVertical: 'top',
     },
     row: {
         flexDirection: 'row',
-        marginBottom: 20, // ensure spacing between rows
     },
     priceInputContainer: {
         flexDirection: 'row',
@@ -437,21 +488,21 @@ const createStyles = (colors: any) => StyleSheet.create({
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
+        borderRadius: 10,
         overflow: 'hidden',
     },
     currencyPrefix: {
-        paddingLeft: 16,
-        paddingRight: 8,
+        paddingLeft: 12,
+        paddingRight: 6,
         color: colors.textSecondary,
         fontWeight: '600',
-        fontSize: 16,
+        fontSize: 14,
     },
     priceInput: {
         flex: 1,
-        paddingVertical: 14,
-        paddingRight: 16,
-        fontSize: 16,
+        paddingVertical: 12,
+        paddingRight: 12,
+        fontSize: 15,
         color: colors.textPrimary,
         fontWeight: '700',
     },
@@ -459,93 +510,96 @@ const createStyles = (colors: any) => StyleSheet.create({
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     dropdownButtonText: {
-        fontSize: 16,
+        fontSize: 15,
         color: colors.textPrimary,
     },
     dropdownList: {
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 16,
-        marginTop: -16,
-        marginBottom: 20,
-        paddingVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
+        borderRadius: 10,
+        marginTop: -12,
+        marginBottom: 16,
+        paddingVertical: 4,
+        elevation: 5,
         zIndex: 10,
     },
     dropdownItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
     },
     dropdownItemText: {
-        fontSize: 15,
+        fontSize: 14,
         color: colors.textSecondary,
     },
     switchRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
         backgroundColor: colors.containerGray,
-        padding: 16,
-        borderRadius: 16,
+        padding: 12,
+        borderRadius: 12,
     },
     switchLabel: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '700',
         color: colors.textPrimary,
     },
     switchSubLabel: {
-        fontSize: 13,
+        fontSize: 12,
         color: colors.textSecondary,
         marginTop: 2,
     },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 10,
         paddingTop: 16,
         borderTopWidth: 1,
         borderTopColor: colors.border,
     },
     deleteButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
+        width: 48,
+        height: 48,
+        borderRadius: 10,
         backgroundColor: colors.errorBg,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    submitButton: {
+    cancelButton: {
         flex: 1,
-        backgroundColor: colors.primary,
-        height: 56,
-        borderRadius: 16,
+        height: 48,
+        borderRadius: 10,
+        borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 6,
+    },
+    cancelButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    submitButton: {
+        flex: 1,
+        height: 48,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     submitButtonText: {
         color: '#FFF',
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '700',
     },
 });

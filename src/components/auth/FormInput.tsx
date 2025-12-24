@@ -57,6 +57,8 @@ const FormInput: React.FC<FormInputProps> = ({
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.eyeIconContainer}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Icon
               name={isPasswordVisible ? 'eye' : 'eye-off'}

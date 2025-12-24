@@ -19,7 +19,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should log in, store token/user, and return login data on success', async () => {
       // Arrange
-      const credentials = { username: 'testuser', password: 'password123' };
+      const credentials = { username: 'testuser', password: 'password123', tenantSlug: 'test-tenant' };
       const mockLoginResponse = {
         access_token: 'fake-jwt-token',
         user: { id: '1', name: 'Test User', username: 'testuser', role: 'owner', employeeId: 'E1', email: 'test@test.com' },
@@ -36,6 +36,7 @@ describe('AuthService', () => {
       expect(mockedApiClient.post).toHaveBeenCalledWith('/api/auth/login', {
         username: credentials.username,
         password: credentials.password,
+        tenantSlug: credentials.tenantSlug,
       });
       expect(mockedApiClient.post).toHaveBeenCalledTimes(1);
 
@@ -50,7 +51,7 @@ describe('AuthService', () => {
 
     it('should throw an error if login API call fails', async () => {
       // Arrange
-      const credentials = { username: 'wronguser', password: 'wrongpassword' };
+      const credentials = { username: 'wronguser', password: 'wrongpassword', tenantSlug: 'test-tenant' };
       const errorMessage = 'Invalid credentials';
       
       // Mock the API to reject the request

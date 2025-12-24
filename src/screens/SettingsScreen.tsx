@@ -13,6 +13,7 @@ import { AppDispatch, RootState } from '../store/store';
 import { setNotificationsEnabled } from '../store/slices/notificationsSlice';
 import StoreProfileModal from '../components/settings/StoreProfileModal';
 import AppearanceModal from '../components/settings/AppearanceModal';
+import ReceiptSettingsModal from '../components/settings/ReceiptSettingsModal';
 
 const SettingsScreen = () => {
   const { isDarkMode, themeMode } = useTheme();
@@ -27,21 +28,23 @@ const SettingsScreen = () => {
 
   const [showStoreProfile, setShowStoreProfile] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
+  const [showReceiptSettings, setShowReceiptSettings] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const data = await getAppSettings();
+      setSettings(data);
+      setRestaurantName(data.restaurantName || 'My Restaurant');
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      setRestaurantName('My Restaurant');
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      const fetchSettings = async () => {
-        try {
-          const data = await getAppSettings();
-          setSettings(data);
-          setRestaurantName(data.restaurantName || 'My Restaurant');
-        } catch (error) {
-          console.error('Failed to load settings:', error);
-          setRestaurantName('My Restaurant');
-        }
-      };
       fetchSettings();
-    }, [])
+    }, [fetchSettings])
   );
 
   const handleNotificationsToggle = async (value: boolean) => {
@@ -159,6 +162,14 @@ const SettingsScreen = () => {
               iconBg={COLORS.containerGray}
               onPress={() => setShowStoreProfile(true)}
             />
+            <SettingItem
+              icon="receipt"
+              title="Receipt Customization"
+              subtitle="Logo, Header & Footer"
+              iconColor={COLORS.primary}
+              iconBg={COLORS.containerGray}
+              onPress={() => setShowReceiptSettings(true)}
+            />
           </View>
         </View>
 
@@ -214,6 +225,13 @@ const SettingsScreen = () => {
       <AppearanceModal
         visible={showAppearance}
         onClose={() => setShowAppearance(false)}
+      />
+
+      <ReceiptSettingsModal
+        visible={showReceiptSettings}
+        onClose={() => setShowReceiptSettings(false)}
+        settings={settings}
+        onUpdate={fetchSettings}
       />
 
     </ScreenContainer>

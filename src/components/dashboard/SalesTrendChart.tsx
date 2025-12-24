@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { getColors } from '../../constants/colors';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -14,34 +15,51 @@ interface SalesTrendChartProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const CHART_WIDTH = screenWidth - 80;
-const CHART_HEIGHT = 150;
-const BAR_COUNT = 12; // Show 12 time slots
 
 const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales Trend' }) => {
     const { isDarkMode } = useTheme();
     const COLORS = getColors(isDarkMode);
     const styles = createStyles(COLORS);
 
-    // Aggregate data into time slots
+    // Process data for the chart (last 6 active hours or key intervals)
     const chartData = useMemo(() => {
-        const slots: { label: string; sales: number }[] = [];
-        const maxSales = Math.max(...data.map(d => d.sales), 1);
+        // Create an array of 24 hours initialized to 0
+        const fullDay = Array(24).fill(0).map((_, i) => ({ hour: i, sales: 0 }));
+        
+        // Fill in actual sales data
+        data.forEach(d => {
+            if (d.hour >= 0 && d.hour < 24) {
+                fullDay[d.hour].sales = d.sales;
+            }
+        });
 
-        // Group hours into 2-hour slots for better visualization
-        for (let i = 0; i < 24; i += 2) {
-            const slotSales = data
-                .filter(d => d.hour >= i && d.hour < i + 2)
-                .reduce((sum, d) => sum + d.sales, 0);
-
-            const label = i === 0 ? '12a' :
-                i === 12 ? '12p' :
-                    i < 12 ? `${i}a` : `${i - 12}p`;
-
-            slots.push({ label, sales: slotSales });
-        }
-
-        return { slots, maxSales };
+        // Determine the range to show:
+        // If data exists, show from the first sale hour to current hour/last sale hour
+        // For visual clarity, we'll pick 6-hour intervals labels but plot all points
+        
+        const salesHours = data.map(d => d.hour);
+        const minHour = salesHours.length > 0 ? Math.min(...salesHours) : 8; // Default start 8am
+        const maxHour = salesHours.length > 0 ? Math.max(...salesHours) : 22; // Default end 10pm
+        
+        // Add some padding (e.g., start 2 hours before first sale, end 2 hours after)
+        const start = Math.max(0, minHour - 2);
+        const end = Math.min(23, maxHour + 2);
+        
+        // Slice the relevant part of the day
+        const displayData = fullDay.slice(start, end + 1);
+        
+        return {
+            labels: displayData.map(d => {
+                // Show label every 3 hours to avoid clutter
+                if (d.hour % 3 === 0) {
+                    const h = d.hour;
+                    return h === 0 ? '12a' : h === 12 ? '12p' : h > 12 ? `${h-12}p` : `${h}a`;
+                }
+                return '';
+            }),
+            data: displayData.map(d => d.sales),
+            fullData: displayData // Keep full objects if needed
+        };
     }, [data]);
 
     const totalSales = useMemo(() => {
@@ -55,6 +73,10 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales 
         const displayHour = peak.hour === 0 ? 12 : peak.hour > 12 ? peak.hour - 12 : peak.hour;
         return `${displayHour}:00 ${period}`;
     }, [data]);
+
+    if (data.length === 0) {
+        return null; 
+    }
 
     return (
         <View style={styles.container}>
@@ -73,66 +95,54 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales 
                 </View>
             </View>
 
-            <View style={styles.chartContainer}>
-                {/* Y-axis labels */}
-                <View style={styles.yAxis}>
-                    <Text style={styles.yAxisLabel}>
-                        {chartData.maxSales.toFixed(0)}
-                    </Text>
-                    <Text style={styles.yAxisLabel}>
-                        {(chartData.maxSales / 2).toFixed(0)}
-                    </Text>
-                    <Text style={styles.yAxisLabel}>0</Text>
-                </View>
-
-                {/* Chart area */}
-                <View style={styles.chartArea}>
-                    {/* Grid lines */}
-                    <View style={styles.gridLines}>
-                        <View style={[styles.gridLine, { backgroundColor: COLORS.borderLight }]} />
-                        <View style={[styles.gridLine, { backgroundColor: COLORS.borderLight }]} />
-                        <View style={[styles.gridLine, { backgroundColor: COLORS.borderLight }]} />
-                    </View>
-
-                    {/* Bars */}
-                    <View style={styles.barsContainer}>
-                        {chartData.slots.map((slot, index) => {
-                            const barHeight = chartData.maxSales > 0
-                                ? (slot.sales / chartData.maxSales) * CHART_HEIGHT
-                                : 0;
-
-                            const isHighest = slot.sales === chartData.maxSales && slot.sales > 0;
-
-                            return (
-                                <View key={index} style={styles.barGroup}>
-                                    <View style={styles.barWrapper}>
-                                        <View
-                                            style={[
-                                                styles.bar,
-                                                {
-                                                    height: Math.max(barHeight, 2),
-                                                    backgroundColor: isHighest
-                                                        ? COLORS.primary
-                                                        : slot.sales > 0
-                                                            ? COLORS.primary + '80'
-                                                            : COLORS.containerGray,
-                                                },
-                                            ]}
-                                        />
-                                        {isHighest && slot.sales > 0 && (
-                                            <View style={[styles.peakIndicator, { backgroundColor: COLORS.primary }]}>
-                                                <Text style={styles.peakValue}>
-                                                    {slot.sales >= 1000 ? `${(slot.sales / 1000).toFixed(1)}k` : slot.sales.toFixed(0)}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                    <Text style={styles.xAxisLabel}>{slot.label}</Text>
-                                </View>
-                            );
-                        })}
-                    </View>
-                </View>
+            <View style={styles.chartWrapper}>
+                <LineChart
+                    data={{
+                        labels: chartData.labels,
+                        datasets: [
+                            {
+                                data: chartData.data,
+                                color: (opacity = 1) => COLORS.primary, // optional
+                                strokeWidth: 3 // optional
+                            }
+                        ]
+                    }}
+                    width={screenWidth - 80} // Container padding adjustment
+                    height={180}
+                    yAxisLabel=""
+                    yAxisSuffix=""
+                    yAxisInterval={1}
+                    chartConfig={{
+                        backgroundColor: COLORS.surface,
+                        backgroundGradientFrom: COLORS.surface,
+                        backgroundGradientTo: COLORS.surface,
+                        decimalPlaces: 0,
+                        color: (opacity = 1) => isDarkMode ? `rgba(124, 195, 159, ${opacity})` : `rgba(124, 195, 159, ${opacity})`,
+                        labelColor: (opacity = 1) => COLORS.textSecondary,
+                        style: {
+                            borderRadius: 16
+                        },
+                        propsForDots: {
+                            r: "4",
+                            strokeWidth: "2",
+                            stroke: COLORS.surface
+                        },
+                        propsForBackgroundLines: {
+                            strokeDasharray: "", // solid lines
+                            stroke: COLORS.borderLight,
+                            strokeWidth: 1
+                        }
+                    }}
+                    bezier
+                    style={{
+                        marginVertical: 8,
+                        borderRadius: 16,
+                        marginLeft: -20 // Adjust for left padding of chart library
+                    }}
+                    withInnerLines={true}
+                    withOuterLines={false}
+                    withVerticalLines={false}
+                />
             </View>
 
             {/* Summary footer */}
@@ -167,12 +177,13 @@ const createStyles = (colors: any) => StyleSheet.create({
         shadowRadius: 12,
         elevation: 4,
         marginBottom: 20,
+        overflow: 'hidden'
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 10,
     },
     headerLeft: {
         flexDirection: 'row',
@@ -214,81 +225,15 @@ const createStyles = (colors: any) => StyleSheet.create({
         fontWeight: '800',
         letterSpacing: -0.3,
     },
-    chartContainer: {
-        flexDirection: 'row',
-        height: CHART_HEIGHT + 30,
-    },
-    yAxis: {
-        width: 40,
-        justifyContent: 'space-between',
-        paddingRight: 8,
-        paddingBottom: 20,
-    },
-    yAxisLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: colors.textTertiary,
-        textAlign: 'right',
-    },
-    chartArea: {
-        flex: 1,
-        position: 'relative',
-    },
-    gridLines: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 20,
-        justifyContent: 'space-between',
-    },
-    gridLine: {
-        height: 1,
-        opacity: 0.5,
-    },
-    barsContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        height: CHART_HEIGHT,
-        justifyContent: 'space-between',
-    },
-    barGroup: {
+    chartWrapper: {
         alignItems: 'center',
-        flex: 1,
-    },
-    barWrapper: {
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        height: CHART_HEIGHT,
-        position: 'relative',
-    },
-    bar: {
-        width: 12,
-        borderRadius: 6,
-        minHeight: 2,
-    },
-    peakIndicator: {
-        position: 'absolute',
-        top: -20,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    peakValue: {
-        fontSize: 9,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    xAxisLabel: {
-        fontSize: 9,
-        fontWeight: '600',
-        color: colors.textTertiary,
-        marginTop: 6,
+        justifyContent: 'center',
+        paddingVertical: 10
     },
     footer: {
         flexDirection: 'row',
         gap: 12,
-        marginTop: 16,
+        marginTop: 8,
     },
     footerItem: {
         flex: 1,

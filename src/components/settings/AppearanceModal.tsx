@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Platform, KeyboardAvoidingView, Pressable } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getColors } from '../../constants/colors';
@@ -26,18 +27,30 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({ visible, onClose }) =
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
-              <View style={styles.header}>
-                <Text style={styles.title}>Appearance</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Icon name="close" size={24} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-              </View>
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Appearance</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Icon name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
 
+            <ScrollView 
+              style={styles.scrollView} 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={true}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
+            >
               <View style={styles.content}>
                 {modes.map((mode) => (
                   <TouchableOpacity
@@ -70,10 +83,10 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({ visible, onClose }) =
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -85,12 +98,25 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  keyboardAvoidingView: {
     width: '85%',
     maxWidth: 340,
+    maxHeight: '85%',
+  },
+  modalContent: {
+    width: '100%',
     backgroundColor: colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
+    maxHeight: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -101,12 +127,18 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   closeButton: {
     padding: 4,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 12,
   },
   content: {
     padding: 12,

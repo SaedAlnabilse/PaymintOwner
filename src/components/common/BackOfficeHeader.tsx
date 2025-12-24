@@ -74,7 +74,7 @@ const BackOfficeHeader: React.FC<BackOfficeHeaderProps> = ({
                     <Icon name="store" size={22} color="#FFFFFF" />
                 </View>
                 <View style={styles.brandInfo}>
-                    <Text style={styles.brandName}>Paymint</Text>
+                    <Text style={styles.brandName} numberOfLines={1}>{storeName}</Text>
                     <Text style={styles.brandTagline}>Back Office</Text>
                 </View>
             </View>

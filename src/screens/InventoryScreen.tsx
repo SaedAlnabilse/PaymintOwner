@@ -90,6 +90,21 @@ const InventoryScreen = () => {
     };
   }, [items]);
 
+  // Calculate Inventory Valuation
+  const valuation = useMemo(() => {
+    let retail = 0;
+    let cost = 0;
+    items.forEach(item => {
+      // Only value items that track stock and have positive stock
+      if (item.trackStock && (item.availableStock || 0) > 0) {
+        const qty = item.availableStock || 0;
+        retail += qty * item.price;
+        cost += qty * (item.costPrice || 0);
+      }
+    });
+    return { retail, cost, potentialProfit: retail - cost };
+  }, [items]);
+
   useEffect(() => {
     loadItems();
     loadCategories();
@@ -341,6 +356,32 @@ const InventoryScreen = () => {
             <Text style={[styles.stockSummaryValue, { color: COLORS.error }]}>{stockSummary.outOfStock}</Text>
             <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>Out of Stock</Text>
           </View>
+        </View>
+
+        {/* Valuation Card */}
+        <View style={[styles.valuationCard, { backgroundColor: COLORS.surface, borderColor: COLORS.border }]}>
+          <View style={styles.valuationRow}>
+            <View>
+              <Text style={[styles.valuationLabel, { color: COLORS.textSecondary }]}>Total Retail Value</Text>
+              <Text style={[styles.valuationValue, { color: COLORS.textPrimary }]}>
+                {valuation.retail.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
+              </Text>
+            </View>
+            <View style={styles.valuationDivider} />
+            <View>
+              <Text style={[styles.valuationLabel, { color: COLORS.textSecondary }]}>Total Cost Value</Text>
+              <Text style={[styles.valuationValue, { color: COLORS.textPrimary }]}>
+                {valuation.cost.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
+              </Text>
+            </View>
+          </View>
+          {valuation.cost > 0 && (
+            <View style={[styles.profitBadge, { backgroundColor: COLORS.successBg }]}>
+              <Text style={[styles.profitText, { color: COLORS.primary }]}>
+                Potential Profit: {valuation.potentialProfit.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.tabs}>
@@ -977,6 +1018,44 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  valuationCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    borderStyle: 'dashed',
+  },
+  valuationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  valuationDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: '#E2E8F0', // Light gray
+  },
+  valuationLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  valuationValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  profitBadge: {
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  profitText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 
