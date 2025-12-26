@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
  */
 
 // Toggle between production and local development
-const USE_PRODUCTION = true; // Set to true to use production Railway server
+const USE_PRODUCTION = false; // Set to true to use production Railway server
 
 // Production API URL (deployed on Railway)
 const PRODUCTION_API_URL = 'https://grateful-liberation-production-d036.up.railway.app';

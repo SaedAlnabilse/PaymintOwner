@@ -9,7 +9,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { RootState } from '../store/store';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
-import { getOwnerDashboard, OwnerDashboard, DashboardSummary, getStaffOverview, StaffMember } from '../services/dashboard';
+import { getOwnerDashboard, OwnerDashboard, DashboardSummary, DashboardMetrics, getStaffOverview, StaffMember } from '../services/dashboard';
 import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales, getHourlySales, HourlySales, fetchOrdersHistory } from '../services/reports';
 import { HistoricalOrder } from '../types/reports';
 
@@ -35,7 +35,7 @@ const DashboardScreen = () => {
 
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('today');
   const [ownerData, setOwnerData] = useState<OwnerDashboard | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardMetrics | null>(null);
   const [comparison, setComparison] = useState<SalesComparison | null>(null);
   const [categoryData, setCategoryData] = useState<CategorySales[]>([]);
   const [hourlySales, setHourlySales] = useState<HourlySales[]>([]);
@@ -222,19 +222,19 @@ const DashboardScreen = () => {
   }
 
   // Handle both nested metrics (old) and flat structure (new)
-  const metrics = dashboardData?.metrics || (dashboardData ? {
-    totalSales: (dashboardData as any).totalSales || (dashboardData as any).netSales || 0,
-    cashSales: (dashboardData as any).cashSales || 0,
-    cardSales: (dashboardData as any).cardSales || 0,
-    orderCount: (dashboardData as any).orderCount || (dashboardData as any).numberOfOrders || 0,
-    totalPayOut: (dashboardData as any).totalPayOut || (dashboardData as any).payOut || 0
-  } : {
-    totalSales: 0,
+  // Use the metrics directly as they now match the backend interface
+  const metrics = dashboardData || {
+    netSales: 0,
+    numberOfOrders: 0,
     cashSales: 0,
     cardSales: 0,
-    orderCount: 0,
-    totalPayOut: 0
-  });
+    otherPayments: 0,
+    drawerAmount: 0,
+    payIn: 0,
+    payOut: 0,
+    totalTimeWorked: '0 minutes',
+    shiftStatus: 'CLOSED'
+  };
 
   /* Loading Overlay Component */
   const LoadingOverlay = () => (
@@ -339,7 +339,7 @@ const DashboardScreen = () => {
                     {periodOptions.find(p => p.key === selectedPeriod)?.label || 'Today'}'s Sales
                   </Text>
                 </View>
-                <Text style={styles.featuredCardValue}>{formatCurrency(metrics.totalSales)}</Text>
+                <Text style={styles.featuredCardValue}>{formatCurrency(metrics.netSales || 0)}</Text>
 
                 {(ownerData?.cashAlerts?.unreadCount ?? 0) > 0 && (
                   <TouchableOpacity
@@ -361,7 +361,7 @@ const DashboardScreen = () => {
                     <Icon name="receipt" size={24} color={COLORS.neutralGray} />
                   </View>
                   <Text style={styles.statLabel}>Receipts</Text>
-                  <Text style={styles.statValue}>{metrics.orderCount}</Text>
+                  <Text style={styles.statValue}>{metrics.numberOfOrders || 0}</Text>
                   {comparison && (
                     <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.orders >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
                       <Icon
@@ -381,7 +381,7 @@ const DashboardScreen = () => {
                     <Icon name="cash-multiple" size={24} color={COLORS.primary} />
                   </View>
                   <Text style={styles.statLabel}>Net Sales</Text>
-                  <Text style={styles.statValue}>{formatCurrency(metrics.totalSales)}</Text>
+                  <Text style={styles.statValue}>{formatCurrency(metrics.netSales || 0)}</Text>
                   {comparison && (
                     <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.sales >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
                       <Icon
@@ -401,7 +401,7 @@ const DashboardScreen = () => {
                     <Icon name="chart-line" size={24} color={COLORS.alertYellow} />
                   </View>
                   <Text style={styles.statLabel}>Average Sale</Text>
-                  <Text style={styles.statValue}>{formatCurrency(metrics.orderCount > 0 ? metrics.totalSales / metrics.orderCount : 0)}</Text>
+                  <Text style={styles.statValue}>{formatCurrency((metrics.numberOfOrders || 0) > 0 ? (metrics.netSales || 0) / metrics.numberOfOrders : 0)}</Text>
                   {comparison && (
                     <View style={[styles.comparisonBadge, { backgroundColor: comparison.percentageChange.average >= 0 ? COLORS.successBg : COLORS.errorBg }]}>
                       <Icon
@@ -421,7 +421,7 @@ const DashboardScreen = () => {
                     <Icon name="credit-card" size={24} color={COLORS.graphGray} />
                   </View>
                   <Text style={styles.statLabel}>Card Sales</Text>
-                  <Text style={styles.statValue}>{formatCurrency(metrics.cardSales)}</Text>
+                  <Text style={styles.statValue}>{formatCurrency(metrics.cardSales || 0)}</Text>
                 </View>
               </View>
 

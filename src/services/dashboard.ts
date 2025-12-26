@@ -1,18 +1,37 @@
 import { apiClient } from './apiClient';
 
+// Backend response structure
+export interface DashboardMetrics {
+  netSales: number;
+  numberOfOrders: number;
+  cashSales: number;
+  cardSales: number;
+  otherPayments: number;
+  drawerAmount: number;
+  payIn: number;
+  payOut: number;
+  totalTimeWorked: string;
+  shiftStatus: 'ACTIVE' | 'LAST_SHIFT' | 'NO_SHIFT' | 'CLOSED';
+}
+
 export interface DashboardSummary {
+  // This matches the structure when calling /reports/live-shift which returns the metrics object directly
+  // or when it's nested in OwnerDashboard
   type?: 'CURRENT_SHIFT' | 'LAST_SHIFT' | 'NO_SHIFT';
   shiftStatus?: 'ACTIVE' | 'LAST_SHIFT' | 'NO_SHIFT' | 'CLOSED';
   shift?: any;
-  metrics: {
-    totalSales: number;
-    cashSales: number;
-    cardSales: number;
-    otherSales: number;
-    orderCount: number;
-    totalPayIn: number;
-    totalPayOut: number;
-  };
+  // properties from backend
+  netSales?: number;
+  numberOfOrders?: number;
+  cashSales?: number;
+  cardSales?: number;
+  otherPayments?: number;
+  drawerAmount?: number;
+  payIn?: number;
+  payOut?: number;
+  totalTimeWorked?: string;
+  // Legacy support if needed, but backend sends above
+  metrics?: DashboardMetrics;
 }
 
 export interface StaffMember {
@@ -42,7 +61,7 @@ export interface StaffOverview {
 }
 
 export interface OwnerDashboard {
-  metrics: DashboardSummary;
+  metrics: DashboardMetrics;
   storeStatus: 'OPEN' | 'CLOSED';
   cashAlerts: {
     unreadCount: number;
@@ -67,18 +86,32 @@ const getDefaultDashboardSummary = (): DashboardSummary => ({
   type: 'NO_SHIFT',
   shiftStatus: 'CLOSED',
   metrics: {
-    totalSales: 0,
+    netSales: 0,
+    numberOfOrders: 0,
     cashSales: 0,
     cardSales: 0,
-    otherSales: 0,
-    orderCount: 0,
-    totalPayIn: 0,
-    totalPayOut: 0,
-  },
+    otherPayments: 0,
+    drawerAmount: 0,
+    payIn: 0,
+    payOut: 0,
+    totalTimeWorked: '0 minutes',
+    shiftStatus: 'CLOSED'
+  }
 });
 
 const getDefaultOwnerDashboard = (): OwnerDashboard => ({
-  metrics: getDefaultDashboardSummary(),
+  metrics: {
+    netSales: 0,
+    numberOfOrders: 0,
+    cashSales: 0,
+    cardSales: 0,
+    otherPayments: 0,
+    drawerAmount: 0,
+    payIn: 0,
+    payOut: 0,
+    totalTimeWorked: '0 minutes',
+    shiftStatus: 'CLOSED'
+  },
   storeStatus: 'CLOSED',
   cashAlerts: { unreadCount: 0, recent: [] },
   staff: { totalStaff: 0, clockedIn: 0, clockedOut: 0 },
