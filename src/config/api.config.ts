@@ -3,36 +3,42 @@ import { Platform } from 'react-native';
 /**
  * API Configuration
  * 
- * Environment modes:
- * - PRODUCTION: Uses the deployed backend on Railway
- * - LOCAL: Uses local development server
+ * Supports dynamic configuration via Setup Screen.
  */
 
-// Toggle between production and local development
-const USE_PRODUCTION = false; // Set to true to use production Railway server
+export const DEFAULT_PRODUCTION_URL = 'https://grateful-liberation-production-d036.up.railway.app';
 
-// Production API URL (deployed on Railway)
-const PRODUCTION_API_URL = 'https://grateful-liberation-production-d036.up.railway.app';
-
-// Local development configuration
-const YOUR_COMPUTER_IP = '192.168.1.36'; // Your computer's IP for physical devices
-const LOCAL_PORT = '3000';
+// Mutable API URL - Defaults to Production for safety, but will be overwritten by AppSettingsService
+export let API_URL = DEFAULT_PRODUCTION_URL;
 
 /**
- * Determines the correct API URL based on the environment
+ * Updates the global API URL.
+ * Call this during app initialization.
  */
-export const getApiUrl = (): string => {
-  if (USE_PRODUCTION) {
-    return PRODUCTION_API_URL;
-  }
-
-  if (Platform.OS === 'android') {
-    // Android Emulator uses 10.0.2.2
-    return `http://10.0.2.2:${LOCAL_PORT}`;
-  }
-
-  // iOS Simulator or other platforms
-  return `http://localhost:${LOCAL_PORT}`;
+export const setApiUrl = (url: string) => {
+  // Remove trailing slash if present
+  const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  API_URL = cleanUrl;
+  console.log('🔄 API URL updated to:', API_URL);
 };
 
-export const API_URL = getApiUrl();
+/**
+ * Helper to generate full image URLs.
+ * Handles relative paths from the backend.
+ */
+export const getImageUrl = (path: string | null | undefined): string | undefined => {
+  if (!path) return undefined;
+  if (path.startsWith('http')) return path;
+  
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  // Remove 'public' if it's part of the path (common issue in some backends)
+  const finalPath = cleanPath.replace('/public', '');
+  
+  return `${API_URL}${finalPath}`;
+};
+
+// Export for debugging
+export const API_CONFIG = {
+  get url() { return API_URL; },
+  platform: Platform.OS,
+};

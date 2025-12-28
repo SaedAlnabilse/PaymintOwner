@@ -7,10 +7,12 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme as usePaperTheme } from 'react-native-paper';
 
 import LoginScreen from '../screens/LoginScreen';
+import SetupScreen from '../screens/SetupScreen'; // Import SetupScreen
 import TenantSelectionScreen from '../screens/TenantSelectionScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import InventoryScreen from '../screens/InventoryScreen';
+import CategoriesScreen from '../screens/CategoriesScreen'; // Import CategoriesScreen
 import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CustomersScreen from '../screens/CustomersScreen';
@@ -113,6 +115,16 @@ const DrawerNavigator = () => {
         }}
       />
       <Drawer.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Icon name="shape-outline" size={22} color={color} />
+          ),
+          title: 'Categories'
+        }}
+      />
+      <Drawer.Screen
         name="Staff"
         component={StaffScreen}
         options={{
@@ -201,6 +213,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Main" component={DrawerNavigator} />
       ) : (
         <>
+          <Stack.Screen name="Setup" component={SetupScreen} />
           {!selectedTenant ? (
             <Stack.Screen name="TenantSelection" component={TenantSelectionScreen} />
           ) : (

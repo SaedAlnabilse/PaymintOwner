@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { itemsService, Item, CreateItemDto, UpdateItemDto } from '../services/itemsService';
@@ -11,6 +11,7 @@ import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { fetchNotifications } from '../store/slices/notificationsSlice';
 import { apiClient } from '../services/apiClient';
+import { getImageUrl } from '../config/api.config';
 
 // Category interface
 interface Category {
@@ -245,11 +246,19 @@ const InventoryScreen = () => {
       >
         <View style={styles.itemMainContent}>
           <View style={[styles.itemIconContainer, { backgroundColor: COLORS.containerGray }]}>
-            <Icon
-              name="package-variant"
-              size={28}
-              color={COLORS.primary}
-            />
+            {item.imageUrl ? (
+              <Image 
+                source={{ uri: getImageUrl(item.imageUrl) }} 
+                style={styles.itemImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Icon
+                name="package-variant"
+                size={28}
+                color={COLORS.primary}
+              />
+            )}
           </View>
 
           <View style={styles.itemInfo}>
@@ -871,6 +880,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+    overflow: 'hidden',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
   },
   itemInfo: {
     flex: 1,

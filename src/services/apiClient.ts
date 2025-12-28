@@ -1,16 +1,28 @@
 import axios from 'axios';
 import store from '../store/store';
-import { API_URL } from '../config/api.config';
+import { API_URL as CONFIG_API_URL } from '../config/api.config';
 import { logout } from '../store/slices/authSlice';
 
+// Re-export API_URL as a live binding from the config
+export { API_URL } from '../config/api.config';
+
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: CONFIG_API_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 });
+
+/**
+ * Updates the Base URL for the API client.
+ * Call this when the AppSettings change.
+ */
+export const updateApiClientUrl = (newUrl: string) => {
+  console.log('🔄 Updating Axios Base URL to:', newUrl);
+  apiClient.defaults.baseURL = newUrl;
+};
 
 // Flag to prevent multiple logout calls
 let isLoggingOut = false;
@@ -28,7 +40,7 @@ const handleForcedLogout = async () => {
     if (userId) {
       try {
         await axios.post(
-          `${API_URL}/api/users/${userId}/clock-out`,
+          `${apiClient.defaults.baseURL}/api/users/${userId}/clock-out`,
           {},
           {
             headers: {

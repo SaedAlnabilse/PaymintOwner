@@ -13,10 +13,14 @@ import { getTheme } from './src/theme/theme';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { pushNotificationService } from './src/services/pushNotificationService';
 import { backgroundNotificationService } from './src/services/backgroundNotificationService';
+import { useAppStartup } from './src/hooks/useAppStartup';
 
 function AppContent() {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
+  
+  // Initialize app settings (API URL)
+  useAppStartup();
 
   // Initialize push notifications and background service
   useEffect(() => {
