@@ -6,17 +6,14 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { RNCamera } from 'react-native-camera';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { updateApiClientUrl } from '../services/apiClient';
 import { setApiUrl, DEFAULT_PRODUCTION_URL } from '../config/api.config';
@@ -36,9 +33,8 @@ const SetupScreen = () => {
   const [storeId, setStoreId] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
-  // Camera State
-  const [isScanning, setIsScanning] = useState(false);
+
+
 
   useEffect(() => {
     loadSettings();
@@ -49,13 +45,13 @@ const SetupScreen = () => {
     try {
       const storedUrl = await AppSettingsService.getApiUrl();
       const storedId = await AppSettingsService.getStoreId();
-      
+
       if (storedUrl) {
         setApiUrlInput(storedUrl);
       } else {
         setApiUrlInput(DEFAULT_PRODUCTION_URL);
       }
-      
+
       if (storedId) {
         setStoreId(storedId);
       }
@@ -67,42 +63,11 @@ const SetupScreen = () => {
   };
 
   const handleScanQr = () => {
-    setIsScanning(true);
-  };
-
-  const onBarCodeRead = (e: any) => {
-    if (!isScanning) return;
-
-    try {
-      const rawData = e.data;
-      console.log('QR Code Scanned:', rawData);
-
-      let scannedUrl = '';
-      let scannedStoreId = '';
-
-      if (rawData.startsWith('{')) {
-        const parsed = JSON.parse(rawData);
-        scannedUrl = parsed.apiUrl || parsed.url || '';
-        scannedStoreId = parsed.storeId || '';
-      } else if (rawData.startsWith('http')) {
-        scannedUrl = rawData;
-      } else {
-        Alert.alert('Invalid QR Code', 'This QR code does not contain a valid URL or configuration.');
-        setIsScanning(false);
-        return;
-      }
-
-      if (scannedUrl) {
-        setApiUrlInput(scannedUrl);
-        if (scannedStoreId) setStoreId(scannedStoreId);
-        setIsScanning(false);
-        Alert.alert('Scanned!', 'Server configuration loaded from QR code.');
-      }
-    } catch (error) {
-      console.error('QR Parse Error:', error);
-      Alert.alert('Error', 'Failed to parse QR code data.');
-      setIsScanning(false);
-    }
+    Alert.alert(
+      'Coming Soon',
+      'QR code scanning will be available in a future update. Please enter the server URL manually.',
+      [{ text: 'OK' }]
+    );
   };
 
   const handleSave = async () => {
@@ -123,14 +88,14 @@ const SetupScreen = () => {
       updateApiClientUrl(apiUrl.trim());
 
       Alert.alert(
-        'Success', 
+        'Success',
         'Configuration saved successfully. Connecting to server...',
         [
           {
             text: 'OK',
             onPress: () => {
               // Navigate to TenantSelection
-              navigation.replace('TenantSelection'); 
+              navigation.replace('TenantSelection');
             }
           }
         ]
@@ -206,8 +171,8 @@ const SetupScreen = () => {
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.scanButton} 
+          <TouchableOpacity
+            style={styles.scanButton}
             onPress={handleScanQr}
             activeOpacity={0.8}
           >
@@ -222,15 +187,15 @@ const SetupScreen = () => {
           </View>
 
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.resetButton} 
+            <TouchableOpacity
+              style={styles.resetButton}
               onPress={handleReset}
             >
               <Text style={styles.resetButtonText}>Reset Default</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.saveButton} 
+            <TouchableOpacity
+              style={styles.saveButton}
               onPress={handleSave}
               disabled={saving}
             >
@@ -246,42 +211,7 @@ const SetupScreen = () => {
         <Text style={styles.versionText}>Paymint Owner v2.0.0</Text>
       </ScrollView>
 
-      {/* Camera Modal */}
-      <Modal
-        visible={isScanning}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setIsScanning(false)}
-      >
-        <View style={styles.cameraContainer}>
-          <RNCamera
-            style={styles.camera}
-            type={RNCamera.Constants.Type.back}
-            flashMode={RNCamera.Constants.FlashMode.auto}
-            captureAudio={false}
-            onBarCodeRead={onBarCodeRead}
-            androidCameraPermissionOptions={{
-              title: 'Permission to use camera',
-              message: 'We need your permission to use your camera for scanning QR codes',
-              buttonPositive: 'Ok',
-              buttonNegative: 'Cancel',
-            }}
-          >
-            <View style={styles.cameraOverlay}>
-              <View style={styles.cameraHeader}>
-                <TouchableOpacity onPress={() => setIsScanning(false)} style={styles.closeCameraButton}>
-                  <Icon name="close" size={28} color="#FFF" />
-                </TouchableOpacity>
-                <Text style={styles.cameraTitle}>Scan QR Code</Text>
-                <View style={{ width: 28 }} />
-              </View>
-              
-              <View style={styles.scanFrame} />
-              <Text style={styles.scanInstruction}>Align the QR code within the frame</Text>
-            </View>
-          </RNCamera>
-        </View>
-      </Modal>
+
     </KeyboardAvoidingView>
   );
 };
@@ -441,60 +371,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
     marginTop: 24,
-  },
-  
-  // Camera Styles
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraHeader: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    zIndex: 10,
-  },
-  closeCameraButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  cameraTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scanFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: '#FFF',
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-  },
-  scanInstruction: {
-    color: '#FFF',
-    marginTop: 20,
-    fontSize: 14,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
   },
 });
 

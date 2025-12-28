@@ -1,0 +1,357 @@
+﻿Initialized native services in: C:\Users\USER\.gradle\native
+Initialized jansi services in: C:\Users\USER\.gradle\native
+The client will now receive all logging from the daemon (pid: 36700). The daemon log file: C:\Users\USER\.gradle\daemon\9.0.0\daemon-36700.out.log
+Starting 5th build in daemon [uptime: 4 mins 58.943 secs, performance: 99%, GC rate: 0.06/s, heap usage: 6% of 2.6 GiB, non-heap usage: 38% of 1 GiB]
+Using 20 worker leases.
+Configuration on demand is an incubating feature.
+Now considering [C:\Users\USER\Desktop\Paymint\PaymintOwner\android, C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Now considering [C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin, C:\Users\USER\Desktop\Paymint\PaymintOwner\android] as hierarchies to watch
+Resolved plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.5.0']
+Using local directory build cache for build ':gradle-plugin' (location = C:\Users\USER\.gradle\caches\build-cache-1, remove unused entries = after 7 days).
+
+> Configure project :gradle-plugin
+Evaluating project ':gradle-plugin' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin\build.gradle.kts'.
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '2.1.20', apply: false]
+Resolved plugin [id: 'com.ncorti.ktfmt.gradle', version: '0.22.0']
+
+> Configure project :gradle-plugin:react-native-gradle-plugin
+Evaluating project ':gradle-plugin:react-native-gradle-plugin' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin\react-native-gradle-plugin\build.gradle.kts'.
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '2.1.20']
+Resolved plugin [id: 'com.ncorti.ktfmt.gradle', version: '0.22.0']
+Resolved plugin [id: 'java-gradle-plugin']
+Build e2f205ca-3f6b-4115-bceb-304cbb30b61d is started
+Using Kotlin Gradle Plugin gradle85 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+
+> Configure project :gradle-plugin:settings-plugin
+Evaluating project ':gradle-plugin:settings-plugin' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin\settings-plugin\build.gradle.kts'.
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '2.1.20']
+Resolved plugin [id: 'com.ncorti.ktfmt.gradle', version: '0.22.0']
+Resolved plugin [id: 'java-gradle-plugin']
+Using Kotlin Gradle Plugin gradle85 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+
+> Configure project :gradle-plugin:shared
+Evaluating project ':gradle-plugin:shared' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin\shared\build.gradle.kts'.
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '2.1.20']
+Resolved plugin [id: 'com.ncorti.ktfmt.gradle', version: '0.22.0']
+Using Kotlin Gradle Plugin gradle85 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+
+> Configure project :gradle-plugin:shared-testutil
+Evaluating project ':gradle-plugin:shared-testutil' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin\shared-testutil\build.gradle.kts'.
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '2.1.20']
+Resolved plugin [id: 'com.ncorti.ktfmt.gradle', version: '0.22.0']
+Using Kotlin Gradle Plugin gradle85 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+Resolved plugin [id: 'com.facebook.react.settings']
+Resolve mutations for :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+Resolve mutations for :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+:gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+Resolve mutations for :gradle-plugin:shared:compileKotlin (Thread[Execution worker,5,main]) started.
+Resolve mutations for :gradle-plugin:settings-plugin:pluginDescriptors (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:settings-plugin:pluginDescriptors (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:shared:compileKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+Caching disabled for task ':gradle-plugin:settings-plugin:pluginDescriptors' because:
+  Not worth caching
+Skipping task ':gradle-plugin:settings-plugin:pluginDescriptors' as it is up-to-date.
+Resolve mutations for :gradle-plugin:settings-plugin:processResources (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:settings-plugin:processResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+Caching disabled for task ':gradle-plugin:settings-plugin:processResources' because:
+  Not worth caching
+Skipping task ':gradle-plugin:settings-plugin:processResources' as it is up-to-date.
+
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+Build cache key for task ':gradle-plugin:shared:compileKotlin' is e6e30ed8ad5335f688ed72c792e41132
+Skipping task ':gradle-plugin:shared:compileKotlin' as it is up-to-date.
+Resolve mutations for :gradle-plugin:shared:compileJava (Thread[Execution worker,5,main]) started.
+:gradle-plugin:shared:compileJava (Thread[Execution worker,5,main]) started.
+
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+Skipping task ':gradle-plugin:shared:compileJava' as it has no source files and no previous output files.
+Resolve mutations for :gradle-plugin:shared:processResources (Thread[Execution worker,5,main]) started.
+:gradle-plugin:shared:processResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+Skipping task ':gradle-plugin:shared:processResources' as it has no source files and no previous output files.
+Resolve mutations for :gradle-plugin:shared:classes (Thread[Execution worker Thread 3,5,main]) started.
+:gradle-plugin:shared:classes (Thread[Execution worker Thread 14,5,main]) started.
+
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+Skipping task ':gradle-plugin:shared:classes' as it has no actions.
+Resolve mutations for :gradle-plugin:shared:jar (Thread[Execution worker Thread 9,5,main]) started.
+:gradle-plugin:shared:jar (Thread[Execution worker Thread 6,5,main]) started.
+
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+Caching disabled for task ':gradle-plugin:shared:jar' because:
+  Not worth caching
+Skipping task ':gradle-plugin:shared:jar' as it is up-to-date.
+work action resolve shared.jar (project :gradle-plugin:shared) (Thread[Execution worker Thread 6,5,main]) started.
+Resolve mutations for :gradle-plugin:settings-plugin:compileKotlin (Thread[included builds,5,main]) started.
+:gradle-plugin:settings-plugin:compileKotlin (Thread[included builds,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+Build cache key for task ':gradle-plugin:settings-plugin:compileKotlin' is d80ee60623f303be81123b51d950dbed
+Skipping task ':gradle-plugin:settings-plugin:compileKotlin' as it is up-to-date.
+Resolve mutations for :gradle-plugin:settings-plugin:compileJava (Thread[included builds,5,main]) started.
+:gradle-plugin:settings-plugin:compileJava (Thread[included builds,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+Skipping task ':gradle-plugin:settings-plugin:compileJava' as it has no source files and no previous output files.
+Resolve mutations for :gradle-plugin:settings-plugin:classes (Thread[included builds,5,main]) started.
+:gradle-plugin:settings-plugin:classes (Thread[included builds,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+Skipping task ':gradle-plugin:settings-plugin:classes' as it has no actions.
+Resolve mutations for :gradle-plugin:settings-plugin:jar (Thread[included builds,5,main]) started.
+:gradle-plugin:settings-plugin:jar (Thread[included builds,5,main]) started.
+
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+Caching disabled for task ':gradle-plugin:settings-plugin:jar' because:
+  Not worth caching
+Skipping task ':gradle-plugin:settings-plugin:jar' as it is up-to-date.
+Settings evaluated using settings file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\android\settings.gradle'.
+Using local directory build cache for the root build (location = C:\Users\USER\.gradle\caches\build-cache-1, remove unused entries = after 7 days).
+Projects loaded. Root project using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\android\build.gradle'.
+Included projects: [root project 'PaymintOwner', project ':app', project ':notifee_react-native', project ':react-native-async-storage_async-storage', project ':react-native-camera', project ':react-native-config', project ':react-native-firebase_app', project ':react-native-firebase_messaging', project ':react-native-gesture-handler', project ':react-native-linear-gradient', project ':react-native-reanimated', project ':react-native-safe-area-context', project ':react-native-screens', project ':react-native-svg', project ':react-native-vector-icons', project ':react-native-worklets']
+Registering project ':gradle-plugin' in composite build. Will substitute for module ':gradle-plugin-root'.
+Registering project ':gradle-plugin:react-native-gradle-plugin' in composite build. Will substitute for module 'com.facebook.react:react-native-gradle-plugin'.
+Registering project ':gradle-plugin:settings-plugin' in composite build. Will substitute for module 'com.facebook.react:settings-plugin'.
+Registering project ':gradle-plugin:shared' in composite build. Will substitute for module 'com.facebook.react:shared'.
+Registering project ':gradle-plugin:shared-testutil' in composite build. Will substitute for module 'com.facebook.react:shared-testutil'.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 11,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:compileKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:compileKotlin (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+Build cache key for task ':gradle-plugin:react-native-gradle-plugin:compileKotlin' is 1748ee7d662d4448d1367f229c5a4153
+Skipping task ':gradle-plugin:react-native-gradle-plugin:compileKotlin' as it is up-to-date.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:compileJava (Thread[Execution worker Thread 11,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:compileJava (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+Skipping task ':gradle-plugin:react-native-gradle-plugin:compileJava' as it has no source files and no previous output files.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:pluginDescriptors (Thread[Execution worker Thread 11,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:pluginDescriptors (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+Caching disabled for task ':gradle-plugin:react-native-gradle-plugin:pluginDescriptors' because:
+  Not worth caching
+Skipping task ':gradle-plugin:react-native-gradle-plugin:pluginDescriptors' as it is up-to-date.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:processResources (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:processResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+Caching disabled for task ':gradle-plugin:react-native-gradle-plugin:processResources' because:
+  Not worth caching
+Skipping task ':gradle-plugin:react-native-gradle-plugin:processResources' as it is up-to-date.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:classes (Thread[Execution worker Thread 2,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:classes (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+Skipping task ':gradle-plugin:react-native-gradle-plugin:classes' as it has no actions.
+Resolve mutations for :gradle-plugin:react-native-gradle-plugin:jar (Thread[Execution worker Thread 3,5,main]) started.
+:gradle-plugin:react-native-gradle-plugin:jar (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+Caching disabled for task ':gradle-plugin:react-native-gradle-plugin:jar' because:
+  Not worth caching
+Skipping task ':gradle-plugin:react-native-gradle-plugin:jar' as it is up-to-date.
+
+> Configure project :app
+Evaluating project ':app' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\android\app\build.gradle'.
+Using default execution profile
+Build cc57b853-06d0-44fa-97ac-f680a353b5b1 is started
+Using Kotlin Gradle Plugin gradle85 variant
+Reading env from: .env
+DefaultConfig: buildConfigField 'API_URL' value is being replaced.
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+C/C++: android.ndkVersion from module build.gradle is [27.1.12297006]
+C/C++: android.ndkPath from module build.gradle is not set
+C/C++: ndk.dir in local.properties is not set
+C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
+C/C++: sdkFolder is C:\Users\USER\AppData\Local\Android\Sdk
+
+> Configure project :
+Evaluating root project 'PaymintOwner' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\android\build.gradle'.
+Found project 'project :gradle-plugin:react-native-gradle-plugin' as substitute for module 'com.facebook.react:react-native-gradle-plugin'.
+Ignoring listeners of task graph ready event, as this build (:gradle-plugin) has already executed work.
+
+> Configure project :notifee_react-native
+Evaluating project ':notifee_react-native' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@notifee\react-native\android\build.gradle'.
+Resolved plugin [id: 'io.invertase.gradle.build', version: '1.5']
+Using default execution profile
+:notifee_react-native @notifee/react-native found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@notifee\react-native
+:notifee_react-native package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@notifee\react-native\package.json
+:notifee_react-native:version set from package.json: 9.1.8 (9,1,8 - 9001008)
+:notifee_react-native:android.compileSdk using custom value: 36
+:notifee_react-native:android.targetSdk using custom value: 36
+:notifee_react-native:android.minSdk using custom value: 24
+:notifee_react-native:reactNativeAndroidDir C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\react-native
+
+> Configure project :react-native-async-storage_async-storage
+Evaluating project ':react-native-async-storage_async-storage' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-async-storage\async-storage\android\build.gradle'.
+Using default execution profile
+[AsyncStorage] Config used: {kotlinVersion=2.1.20, kspVersion=1.9.24-1.0.20, roomVersion=2.6.1, minSdkVersion=24, targetSdkVersion=36, compileSdkVersion=36, useNextStorage=false, databaseSizeMB=6, isNewArchitectureEnabled=true, useDedicatedExecutor=false}
+
+> Configure project :react-native-camera
+Evaluating project ':react-native-camera' using build file 'C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\react-native-camera\android\build.gradle'.
+Using default execution profile
+Build e2f205ca-3f6b-4115-bceb-304cbb30b61d is closed
+Build cc57b853-06d0-44fa-97ac-f680a353b5b1 is closed
+
+[Incubating] Problems report is available at: file:///C:/Users/USER/Desktop/Paymint/PaymintOwner/android/build/reports/problems/problems-report.html
+.\gradlew : 
+At line:1 char:1
++ .\gradlew assembleRelease --info 2>&1 | 
+Out-File -FilePath build_log_ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (: 
+   String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandErr 
+   or
+ 
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file 'C:\Users\USER\Desktop\Paymint\Paymi
+ntOwner\node_modules\react-native-camera\androi
+d\build.gradle' line: 59
+
+* What went wrong:
+A problem occurred evaluating project 
+':react-native-camera'.
+> Could not find method jcenter() for 
+arguments [] on repository container of type or
+g.gradle.api.internal.artifacts.dsl.DefaultRepo
+sitoryHandler.
+
+* Try:
+> Run with --stacktrace option to get the 
+stack trace.
+> Run with --debug option to get more log 
+output.
+> Run with --scan to generate a Build Scan 
+(Powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 2s
+10 actionable tasks: 10 up-to-date
+Watched directory hierarchies: [C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native\gradle-plugin, C:\Users\USER\Desktop\Paymint\PaymintOwner\android]
