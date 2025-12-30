@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pushNotificationService } from './pushNotificationService';
+import { secureStorage } from './secureStorage';
 
-const TOKEN_KEY = '@owner_access_token';
 const USER_KEY = '@owner_user';
 const TENANT_KEY = '@owner_tenant';
 
@@ -107,7 +107,7 @@ class AuthService {
   async storeToken(token: string): Promise<void> {
     try {
       if (!token) return;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await secureStorage.storeToken(token);
     } catch (error) {
       console.error('Failed to store token:', error);
     }
@@ -115,7 +115,7 @@ class AuthService {
 
   async getToken(): Promise<string | null> {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await secureStorage.getToken();
       return token;
     } catch (error) {
       console.error('Failed to get token:', error);
@@ -125,7 +125,7 @@ class AuthService {
 
   async clearToken(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await secureStorage.clearToken();
     } catch (error) {
       console.error('Failed to clear token:', error);
     }

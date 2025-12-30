@@ -1,0 +1,104 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Configuration on demand is an incubating feature.
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :app
+Reading env from: .env
+
+> Configure project :notifee_react-native
+:notifee_react-native @notifee/react-native found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@notifee\react-native
+:notifee_react-native package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@notifee\react-native\package.json
+:notifee_react-native:version set from package.json: 9.1.8 (9,1,8 - 9001008)
+:notifee_react-native:android.compileSdk using custom value: 36
+:notifee_react-native:android.targetSdk using custom value: 36
+:notifee_react-native:android.minSdk using custom value: 24
+:notifee_react-native:reactNativeAndroidDir C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\react-native
+
+> Configure project :react-native-firebase_app
+:react-native-firebase_app package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:firebase.bom using default value: 34.6.0
+:react-native-firebase_app:play.play-services-auth using default value: 21.4.0
+:react-native-firebase_app package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:version set from package.json: 23.6.0 (23,6,0 - 23006000)
+:react-native-firebase_app:android.compileSdk using custom value: 36
+:react-native-firebase_app:android.targetSdk using custom value: 36
+:react-native-firebase_app:android.minSdk using custom value: 24
+:react-native-firebase_app:reactNativeAndroidDir C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\react-native
+
+> Configure project :react-native-firebase_messaging
+:react-native-firebase_messaging package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-firebase\messaging\package.json
+:react-native-firebase_app package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_messaging:firebase.bom using default value: 34.6.0
+:react-native-firebase_messaging package.json found at C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\@react-native-firebase\messaging\package.json
+:react-native-firebase_messaging:version set from package.json: 23.6.0 (23,6,0 - 23006000)
+:react-native-firebase_messaging:android.compileSdk using custom value: 36
+:react-native-firebase_messaging:android.targetSdk using custom value: 36
+:react-native-firebase_messaging:android.minSdk using custom value: 24
+:react-native-firebase_messaging:reactNativeAndroidDir C:\Users\USER\Desktop\Paymint\PaymintOwner\node_modules\react-native
+
+> Task :notifee_react-native:clean UP-TO-DATE
+> Task :react-native-vector-icons:clean UP-TO-DATE
+> Task :react-native-reanimated:cleanCmakeCache
+> Task :react-native-config:clean UP-TO-DATE
+> Task :react-native-async-storage_async-storage:clean UP-TO-DATE
+> Task :react-native-safe-area-context:clean UP-TO-DATE
+> Task :react-native-firebase_messaging:clean UP-TO-DATE
+> Task :react-native-worklets:cleanCmakeCache
+> Task :react-native-svg:clean UP-TO-DATE
+> Task :react-native-keychain:clean UP-TO-DATE
+> Task :react-native-linear-gradient:clean UP-TO-DATE
+> Task :react-native-firebase_app:clean UP-TO-DATE
+> Task :react-native-worklets:externalNativeBuildCleanDebug
+> Task :react-native-gesture-handler:externalNativeBuildCleanDebug
+> Task :react-native-screens:externalNativeBuildCleanDebug
+> Task :react-native-reanimated:externalNativeBuildCleanDebug
+> Task :react-native-worklets:externalNativeBuildCleanRelease
+> Task :react-native-gesture-handler:externalNativeBuildCleanRelease
+> Task :react-native-screens:externalNativeBuildCleanRelease
+> Task :react-native-reanimated:externalNativeBuildCleanRelease
+> Task :react-native-gesture-handler:clean UP-TO-DATE
+> Task :react-native-screens:clean UP-TO-DATE
+> Task :react-native-worklets:clean
+> Task :react-native-reanimated:clean
+
+> Task :app:externalNativeBuildCleanDebug FAILED
+Clean react_codegen_RNVectorIconsSpec-armeabi-v7a, react_codegen_rnreanimated-armeabi-v7a, react_codegen_safeareacontext-armeabi-v7a, react_codegen_RNCConfigSpec-armeabi-v7a, react_codegen_rngesturehandler_codegen-armeabi-v7a, react_codegen_rnscreens-armeabi-v7a, appmodules-armeabi-v7a, react_codegen_rnsvg-armeabi-v7a, react_codegen_rnworklets-armeabi-v7a, react_codegen_rnasyncstorage-armeabi-v7a
+C/C++: CMake Error in CMakeLists.txt:
+C/C++:   Imported target "ReactAndroid::jsi" includes non-existent path
+C/C++:     "C:/Users/USER/.gradle/caches/9.0.0/transforms/d5ff915c5861c8a5d6b5b275b0f0b17f/transformed/jetified-react-android-0.82.1-debug/prefab/modules/jsi/include"
+C/C++:   in its INTERFACE_INCLUDE_DIRECTORIES.  Possible reasons include:
+C/C++:   * The path was deleted, renamed, or moved to another location.
+C/C++:   * An install or uninstall procedure did not complete successfully.
+C/C++:   * The installation package was faulty and references files it does not
+C/C++:   provide.
+C/C++: CMake Generate step failed.  Build files cannot be regenerated correctly.
+C/C++: ninja: error: rebuilding 'build.ninja': subcommand failed
+
+[Incubating] Problems report is available at: file:///C:/Users/USER/Desktop/Paymint/PaymintOwner/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+35 actionable tasks: 13 executed, 22 up-to-date
