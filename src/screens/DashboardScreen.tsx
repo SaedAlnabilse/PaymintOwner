@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Animated, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Animated, ActivityIndicator, RefreshControl, Alert, Modal, Pressable } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -10,11 +11,12 @@ import { RootState } from '../store/store';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { getOwnerDashboard, OwnerDashboard, DashboardSummary, DashboardMetrics, getStaffOverview, StaffMember } from '../services/dashboard';
-import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales, getHourlySales, HourlySales, fetchOrdersHistory } from '../services/reports';
-import { HistoricalOrder } from '../types/reports';
+import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales, getHourlySales, HourlySales, fetchOrdersHistory, fetchOrderDetails } from '../services/reports';
+import { HistoricalOrder, OrderDetails } from '../types/reports';
 
 // Import new dashboard components
 import { SalesTrendChart, TopEmployeesCard, RecentOrdersFeed } from '../components/dashboard';
+import OrderDetailsModal from '../components/reports/OrderDetailsModal';
 
 const DashboardScreen = () => {
   const { isDarkMode } = useTheme();
@@ -25,12 +27,12 @@ const DashboardScreen = () => {
 
   // Time period options
   type TimePeriod = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth';
-  const periodOptions: { key: TimePeriod; label: string }[] = [
-    { key: 'today', label: 'Today' },
-    { key: 'yesterday', label: 'Yesterday' },
-    { key: 'thisWeek', label: 'This Week' },
-    { key: 'lastWeek', label: 'Last Week' },
-    { key: 'thisMonth', label: 'This Month' },
+  const periodOptions: { key: TimePeriod; label: string; icon: string }[] = [
+    { key: 'today', label: 'Today', icon: 'calendar-today' },
+    { key: 'yesterday', label: 'Yesterday', icon: 'history' },
+    { key: 'thisWeek', label: 'This Week', icon: 'calendar-week' },
+    { key: 'lastWeek', label: 'Last Week', icon: 'calendar-arrow-left' },
+    { key: 'thisMonth', label: 'This Month', icon: 'calendar-month' },
   ];
 
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('today');
@@ -45,8 +47,24 @@ const DashboardScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Order Detail Modal State
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderDetails | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+  const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
+
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
+
+  // Safe wrapper for orders history to prevent dashboard crash
+  const safeFetchOrders = async (start: string, end: string) => {
+    try {
+      return await fetchOrdersHistory(start, end, { page: 1, limit: 20, status: 'ALL' });
+    } catch (error) {
+      console.warn('Failed to fetch recent orders:', error);
+      return [];
+    }
+  };
 
   // Get date ranges based on selected period
   const getDateRanges = useCallback((period: TimePeriod) => {
@@ -111,7 +129,7 @@ const DashboardScreen = () => {
         getSalesComparison(currentStart, currentEnd, previousStart, previousEnd),
         getSalesByCategory(currentStart, currentEnd),
         getHourlySales(currentStart, currentEnd),
-        fetchOrdersHistory(currentStart, currentEnd, { page: 1, limit: 20, status: 'ALL' }),
+        safeFetchOrders(currentStart, currentEnd),
         getStaffOverview(),
       ]);
 
@@ -178,6 +196,21 @@ const DashboardScreen = () => {
     return `${amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} JOD`;
   };
 
+  const handleOrderPress = async (orderId: string) => {
+    setLoadingOrderDetails(true);
+    setShowOrderModal(true);
+    try {
+      const details = await fetchOrderDetails(orderId);
+      setSelectedOrderDetails(details);
+    } catch (err) {
+      console.error('Failed to fetch order details:', err);
+      Alert.alert('Error', 'Could not load order details');
+      setShowOrderModal(false);
+    } finally {
+      setLoadingOrderDetails(false);
+    }
+  };
+
   const styles = createStyles(COLORS);
 
   const MetricCard = ({ title, value, icon, color }: any) => (
@@ -223,7 +256,7 @@ const DashboardScreen = () => {
 
   // Handle both nested metrics (old) and flat structure (new)
   // Use the metrics directly as they now match the backend interface
-  const metrics = dashboardData || {
+  let metrics = dashboardData || {
     netSales: 0,
     numberOfOrders: 0,
     cashSales: 0,
@@ -235,6 +268,25 @@ const DashboardScreen = () => {
     totalTimeWorked: '0 minutes',
     shiftStatus: 'CLOSED'
   };
+
+  // If we are looking at a past period, override the main sales/orders metrics 
+  // with the historical data from the comparison API
+  if (selectedPeriod !== 'today' && comparison) {
+    metrics = {
+      ...metrics,
+      netSales: comparison.current.totalSales,
+      numberOfOrders: comparison.current.orderCount,
+      // For historical periods, we might not have detailed breakdown like cardSales 
+      // unless we fetch a detailed report. For now, we keep the live values or zero 
+      // them out to avoid confusion? 
+      // Better to zero them or hide them if data isn't available, but preserving layout 
+      // is safer. Let's keep cardSales as 0 or estimated if possible.
+      // Actually, let's leave cardSales/cashSales as 0 to indicate "N/A" for history 
+      // rather than showing today's values which would be wrong.
+      cashSales: 0,
+      cardSales: 0,
+    };
+  }
 
   /* Loading Overlay Component */
   const LoadingOverlay = () => (
@@ -280,18 +332,44 @@ const DashboardScreen = () => {
       ) : (
         <>
           <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>
-                Hello, {user?.name?.split(' ')[0] || 'Owner'} 👋
-              </Text>
-              <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Dashboard</Text>
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.headerTagline}>
+                  HELLO, {user?.name ? user.name.split(' ')[0].toUpperCase() : 'OWNER'} 👋
+                </Text>
+                <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Dashboard</Text>
+              </View>
+              <TouchableOpacity
+                onPress={onRefresh}
+                style={[styles.actionButton, { backgroundColor: COLORS.containerGray }]}
+              >
+                <Icon name="refresh" size={22} color={COLORS.primary} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={onRefresh}
-              style={[styles.menuButton, { backgroundColor: COLORS.containerGray }]}
-            >
-              <Icon name="refresh" size={24} color={COLORS.primary} />
-            </TouchableOpacity>
+
+            {/* Compact Quick Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={[styles.headerStatValue, { color: COLORS.textPrimary }]}>
+                  {metrics.numberOfOrders || 0}
+                </Text>
+                <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Orders</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.headerStatValue, { color: COLORS.primary }]}>
+                  {formatCurrency(metrics.netSales || 0).split(' ')[0]}
+                </Text>
+                <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Sales</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.headerStatValue, { color: (ownerData?.cashAlerts?.unreadCount ?? 0) > 0 ? COLORS.orange : COLORS.textTertiary }]}>
+                  {ownerData?.cashAlerts?.unreadCount ?? 0}
+                </Text>
+                <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Alerts</Text>
+              </View>
+            </View>
           </View>
 
           {/* Time Period Selector */}
@@ -301,29 +379,57 @@ const DashboardScreen = () => {
             style={styles.periodSelector}
             contentContainerStyle={styles.periodSelectorContent}
           >
-            {periodOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.periodChip,
-                  {
-                    backgroundColor: selectedPeriod === option.key ? COLORS.primary : COLORS.surface,
-                    borderColor: selectedPeriod === option.key ? COLORS.primary : COLORS.borderLight,
+            {periodOptions.map((option) => {
+              const isSelected = selectedPeriod === option.key;
+
+              const ChipContent = (
+                <View style={[
+                  styles.periodChipInner,
+                  !isSelected && {
+                    backgroundColor: COLORS.surface,
+                    borderColor: COLORS.borderLight,
+                    borderWidth: 1,
                   }
-                ]}
-                onPress={() => {
-                  setSelectedPeriod(option.key);
-                  loadData(false);
-                }}
-              >
-                <Text style={[
-                  styles.periodChipText,
-                  { color: selectedPeriod === option.key ? '#FFF' : COLORS.textSecondary }
                 ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Icon
+                    name={option.icon}
+                    size={16}
+                    color={isSelected ? '#FFF' : COLORS.textSecondary}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[
+                    styles.periodChipText,
+                    { color: isSelected ? '#FFF' : COLORS.textSecondary }
+                  ]}>
+                    {option.label}
+                  </Text>
+                </View>
+              );
+
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  onPress={() => {
+                    setSelectedPeriod(option.key);
+                    loadData(false);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  {isSelected ? (
+                    <LinearGradient
+                      colors={[COLORS.primary, '#5cb28d']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.periodChipGradient}
+                    >
+                      {ChipContent}
+                    </LinearGradient>
+                  ) : (
+                    ChipContent
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           <ScrollView
@@ -458,10 +564,10 @@ const DashboardScreen = () => {
               )}
 
               {/* Sales Trend Chart - Hourly Performance */}
-              {selectedPeriod === 'today' && hourlySales.length > 0 && (
+              {(selectedPeriod === 'today' || selectedPeriod === 'yesterday') && hourlySales.length > 0 && (
                 <SalesTrendChart
                   data={hourlySales}
-                  title="Today's Sales Trend"
+                  title={`${periodOptions.find(p => p.key === selectedPeriod)?.label}'s Sales Trend`}
                 />
               )}
 
@@ -469,8 +575,8 @@ const DashboardScreen = () => {
               {recentOrders.length > 0 && (
                 <RecentOrdersFeed
                   orders={recentOrders}
-                  onOrderPress={(orderId) => navigation.navigate('Reports')}
-                  onViewAll={() => navigation.navigate('Reports')}
+                  onOrderPress={handleOrderPress}
+                  onViewAll={() => setShowAllOrdersModal(true)}
                   maxItems={5}
                 />
               )}
@@ -483,60 +589,87 @@ const DashboardScreen = () => {
                 />
               )}
 
-              {/* Quick Actions */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="lightning-bolt" size={20} color={COLORS.alertYellow} />
-                  <Text style={styles.sectionTitle}>Quick Actions</Text>
-                </View>
-                <View style={styles.actionGrid}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('Reports')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(148, 163, 184, 0.15)' : COLORS.containerGray }]}>
-                      <Icon name="chart-box" size={28} color={COLORS.graphGray} />
-                    </View>
-                    <Text style={styles.actionText}>Reports</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('Inventory')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : COLORS.containerGray }]}>
-                      <Icon name="package-variant" size={28} color={COLORS.alertYellow} />
-                    </View>
-                    <Text style={styles.actionText}>Inventory</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('Staff')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(168, 187, 191, 0.15)' : COLORS.containerGray }]}>
-                      <Icon name="account-group" size={28} color={COLORS.neutralGray} />
-                    </View>
-                    <Text style={styles.actionText}>Staff</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('Settings')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? 'rgba(176, 179, 184, 0.15)' : COLORS.containerGray }]}>
-                      <Icon name="cog" size={28} color={COLORS.textSecondary} />
-                    </View>
-                    <Text style={styles.actionText}>Settings</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+
 
             </Animated.View>
           </ScrollView>
         </>
       )}
+
+      <OrderDetailsModal
+        visible={showOrderModal}
+        onClose={() => {
+          setShowOrderModal(false);
+          setSelectedOrderDetails(null);
+        }}
+        order={selectedOrderDetails}
+        isLoading={loadingOrderDetails}
+      />
+
+      {/* All Orders Modal */}
+      <Modal
+        visible={showAllOrdersModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAllOrdersModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowAllOrdersModal(false)} />
+          <View style={[styles.allOrdersContainer, { backgroundColor: COLORS.surface }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>Recent Orders</Text>
+                <Text style={[styles.modalSubtitle, { color: COLORS.textSecondary }]}>{recentOrders.length} orders total</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowAllOrdersModal(false)}
+                style={[styles.closeButton, { backgroundColor: COLORS.containerGray }]}
+              >
+                <Icon name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.allOrdersList}
+            >
+              {recentOrders.map((order) => {
+                const getStatusColor = (order: HistoricalOrder) => {
+                  if (order.isRefunded || order.status === 'REFUNDED') return { bg: COLORS.errorBg, text: COLORS.error, label: 'Refunded' };
+                  if (order.status === 'COMPLETED') return { bg: COLORS.successBg, text: COLORS.primary, label: 'Completed' };
+                  return { bg: COLORS.containerGray, text: COLORS.textSecondary, label: order.status };
+                };
+                const status = getStatusColor(order);
+
+                return (
+                  <TouchableOpacity
+                    key={order.id}
+                    onPress={() => {
+                      // setShowAllOrdersModal(false); // User might want to go back to list, keep it open?
+                      handleOrderPress(order.id);
+                    }}
+                    style={[styles.orderItemRow, { borderBottomColor: COLORS.borderLight }]}
+                  >
+                    <View style={styles.orderItemMain}>
+                      <Text style={[styles.orderItemNumber, { color: COLORS.textPrimary }]}>#{order.orderNumber || order.id.slice(-6)}</Text>
+                      <Text style={[styles.orderItemTime, { color: COLORS.textSecondary }]}>
+                        {moment(order.createdAt).format('h:mm A')} • {order.paymentMethod || 'Cash'}
+                      </Text>
+                    </View>
+                    <View style={styles.orderItemRight}>
+                      <Text style={[styles.orderItemTotal, { color: COLORS.primary }]}>{formatCurrency(order.total)}</Text>
+                      <View style={[styles.modalStatusBadge, { backgroundColor: status.bg }]}>
+                        <Text style={[styles.modalStatusText, { color: status.text }]}>{status.label}</Text>
+                      </View>
+                    </View>
+                    <Icon name="chevron-right" size={20} color={COLORS.textTertiary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 };
@@ -612,52 +745,56 @@ const createStyles = (colors: any) => StyleSheet.create({
     minWidth: 180,
   },
   header: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 20,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 10,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginHorizontal: 20,
-    marginTop: 10, // Reduced since SafeAreaView now handles the top spacing
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    // iOS Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    // Android Shadow
-    elevation: 4,
+    marginBottom: 20,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 14,
-    fontWeight: '600',
+  headerTagline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 1.5,
     marginBottom: 4,
-    letterSpacing: 0.2,
-    color: colors.textSecondary,
+    textTransform: 'uppercase',
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    color: colors.textPrimary,
-  },
-  menuButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  headerTitle: { fontSize: 28, fontWeight: '800' },
+  actionButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.containerGray,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  statItem: { alignItems: 'center' },
+  headerStatValue: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  headerStatLabel: { fontSize: 11, fontWeight: '600' },
+  statDivider: { width: 1, height: 24, backgroundColor: colors.borderLight },
   content: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   featuredCard: {
@@ -797,31 +934,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     letterSpacing: -0.3,
     color: colors.textPrimary,
   },
-  actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  actionButton: {
-    alignItems: 'center',
-    width: '22%',
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -0.1,
-    color: colors.textPrimary,
-  },
+
   // Comparison Badge Styles
   comparisonBadge: {
     flexDirection: 'row',
@@ -874,31 +987,123 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   // Period Selector Styles
   periodSelector: {
-    // marginHorizontal: 20, // Removed to allow full-bleed scrolling
     marginTop: 12,
-    marginBottom: 12,
+    marginBottom: 0,
     flexGrow: 0,
-    minHeight: 40,
+    minHeight: 54,
   },
   periodSelectorContent: {
-    gap: 8,
-    paddingHorizontal: 20, // Added padding to align content with other elements
-    paddingVertical: 4,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
-  periodChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  periodChipGradient: {
     borderRadius: 100,
-    borderWidth: 1,
+    padding: 1, // Offset for the border effect if needed, but handled by Inner
+  },
+  periodChipInner: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 36, // Increased height for better interaction and visual balance
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 100,
+    minHeight: 40,
+    // iOS Shadow for selected
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   periodChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  allOrdersContainer: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    height: '80%',
+    padding: 24,
+    // iOS Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    // Android Shadow
+    elevation: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  allOrdersList: {
+    paddingBottom: 40,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+  },
+  orderItemMain: {
+    flex: 1,
+  },
+  orderItemNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  orderItemTime: {
     fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
-    textAlign: 'center',
+    fontWeight: '500',
+  },
+  orderItemRight: {
+    alignItems: 'flex-end',
+    marginRight: 12,
+  },
+  orderItemTotal: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  modalStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  modalStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 });
 

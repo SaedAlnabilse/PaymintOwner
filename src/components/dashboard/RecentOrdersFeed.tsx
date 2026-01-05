@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import moment from 'moment-timezone';
@@ -32,8 +32,23 @@ const RecentOrdersFeed: React.FC<RecentOrdersFeedProps> = ({
     const { isDarkMode } = useTheme();
     const COLORS = getColors(isDarkMode);
     const styles = createStyles(COLORS);
+    const scrollRef = useRef<ScrollView>(null);
 
-    const recentOrders = orders.slice(0, maxItems);
+    const [displayLimit, setDisplayLimit] = useState(maxItems);
+    const isExpanded = displayLimit > maxItems;
+
+    const recentOrders = orders.slice(0, displayLimit);
+
+    const handleMorePress = () => {
+        setDisplayLimit(orders.length);
+        // Small timeout to allow the new items to render before scrolling
+        setTimeout(() => {
+            scrollRef.current?.scrollTo({
+                x: maxItems * (160 + 12), // Scroll to the first newly added item
+                animated: true
+            });
+        }, 100);
+    };
 
     const formatCurrency = (amount: number) => {
         return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} JOD`;
@@ -68,7 +83,12 @@ const RecentOrdersFeed: React.FC<RecentOrdersFeedProps> = ({
         if (diffMinutes < 1) return 'Just now';
         if (diffMinutes < 60) return `${diffMinutes}m ago`;
         if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-        return date.format('MMM D, h:mm A');
+
+        // If it's this year, keep it short. If older, add year.
+        if (date.year() === now.year()) {
+            return date.format('D MMM, HH:mm');
+        }
+        return date.format('D MMM YY');
     };
 
     if (recentOrders.length === 0) {
@@ -112,6 +132,7 @@ const RecentOrdersFeed: React.FC<RecentOrdersFeedProps> = ({
             </View>
 
             <ScrollView
+                ref={scrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.ordersContainer}
@@ -168,14 +189,14 @@ const RecentOrdersFeed: React.FC<RecentOrdersFeedProps> = ({
                     );
                 })}
 
-                {orders.length > maxItems && (
+                {orders.length > displayLimit && (
                     <TouchableOpacity
                         style={[styles.moreCard, { backgroundColor: COLORS.badgeBg }]}
-                        onPress={onViewAll}
+                        onPress={handleMorePress}
                         activeOpacity={0.7}
                     >
                         <Text style={[styles.moreCount, { color: COLORS.primary }]}>
-                            +{orders.length - maxItems}
+                            +{orders.length - displayLimit}
                         </Text>
                         <Text style={[styles.moreText, { color: COLORS.primary }]}>more</Text>
                         <Icon name="chevron-right" size={20} color={COLORS.primary} />
@@ -259,7 +280,7 @@ const createStyles = (colors: any) => StyleSheet.create({
         paddingBottom: 4,
     },
     orderCard: {
-        width: 160,
+        width: 180,
         padding: 14,
         borderRadius: 14,
         marginRight: 12,
@@ -277,6 +298,7 @@ const createStyles = (colors: any) => StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
+        flexShrink: 1,
     },
     statusText: {
         fontSize: 10,
@@ -285,9 +307,11 @@ const createStyles = (colors: any) => StyleSheet.create({
         letterSpacing: 0.3,
     },
     orderTime: {
-        fontSize: 10,
-        fontWeight: '500',
+        fontSize: 9.5,
+        fontWeight: '600',
         color: colors.textTertiary,
+        flexShrink: 0,
+        marginLeft: 4,
     },
     orderMiddle: {
         marginBottom: 12,

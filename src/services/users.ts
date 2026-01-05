@@ -14,8 +14,8 @@ export interface CreateUserDto {
   name: string;
   username: string;
   email?: string;
-  password?: string;
-  pinCode: string;
+  password: string; // Required
+  pinCode?: string; // Optional (auto-generated)
   role: string;
 }
 
@@ -24,7 +24,10 @@ export interface UpdateUserDto {
   username?: string;
   email?: string;
   pinCode?: string;
+  password?: string;
   role?: string;
+  permissions?: string[];
+  allowedDiscounts?: string[];
 }
 
 export const getUsers = async (): Promise<User[]> => {

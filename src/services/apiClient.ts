@@ -96,8 +96,15 @@ apiClient.interceptors.response.use(
 
     // Handle 401 (Unauthorized) - token expired or invalid
     if (status === 401) {
-      console.warn('Unauthorized (401). Logging out user.');
-      await handleForcedLogout();
+      const state = store.getState();
+      // Only force logout if we aren't currently loading the initial auth state
+      // and if we actually were supposed to be authenticated.
+      if (!state.auth.isLoading && state.auth.token) {
+        console.warn('Unauthorized (401). Logging out user.');
+        await handleForcedLogout();
+      } else {
+        console.log('Skipping forced logout: App is in loading state or no token present');
+      }
     }
 
     return Promise.reject(error);

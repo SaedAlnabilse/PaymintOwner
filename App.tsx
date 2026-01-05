@@ -56,10 +56,12 @@ function AppContent() {
   );
 }
 
+import { StyleSheet } from 'react-native';
+
 function App() {
   return (
     <GlobalErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={styles.container}>
         <Provider store={store}>
           <ThemeProvider>
             <AppContent />
@@ -69,5 +71,11 @@ function App() {
     </GlobalErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default App;

@@ -25,6 +25,75 @@ interface ReceiptSettingsModalProps {
   onUpdate: () => void;
 }
 
+interface ReceiptPreviewProps {
+  restaurantName: string;
+  farewellMessage: string;
+  styles: any;
+  colors: any;
+}
+
+const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({
+  restaurantName,
+  farewellMessage,
+  styles,
+  colors: _colors
+}) => (
+  <View style={styles.previewContainer}>
+    <View style={styles.previewPaper}>
+      {/* Paper texture effect */}
+      <View style={styles.previewHeader}>
+        <View style={styles.previewLogoPlaceholder}>
+          <Icon name="store" size={24} color="#CBD5E1" />
+        </View>
+        <Text style={styles.previewTitle}>{restaurantName || 'Restaurant Name'}</Text>
+        <Text style={styles.previewText}>Amman, Jordan</Text>
+        <Text style={styles.previewText}>+962 79 123 4567</Text>
+      </View>
+
+      <View style={styles.previewDivider}>
+        <Text style={styles.previewDividerText}>--------------------------------</Text>
+      </View>
+
+      <View style={styles.previewRow}>
+        <Text style={styles.previewText}>Order #1024</Text>
+        <Text style={styles.previewText}>12:30 PM</Text>
+      </View>
+
+      <View style={styles.previewDivider}>
+        <Text style={styles.previewDividerText}>--------------------------------</Text>
+      </View>
+
+      <View style={styles.previewItemRow}>
+        <Text style={styles.previewItemName}>1x Latte</Text>
+        <Text style={styles.previewItemPrice}>3.50</Text>
+      </View>
+      <View style={styles.previewItemRow}>
+        <Text style={styles.previewItemName}>1x Cheesecake</Text>
+        <Text style={styles.previewItemPrice}>4.00</Text>
+      </View>
+
+      <View style={[styles.previewDivider, { marginTop: 10 }]}>
+        <Text style={styles.previewDividerText}>--------------------------------</Text>
+      </View>
+
+      <View style={styles.previewTotalRow}>
+        <Text style={styles.previewTotalLabel}>TOTAL</Text>
+        <Text style={styles.previewTotalValue}>7.50 JOD</Text>
+      </View>
+
+      <View style={styles.previewFooter}>
+        <Text style={styles.previewFooterText}>{farewellMessage || 'Thank you for your visit!'}</Text>
+      </View>
+      <View style={styles.tearLine}>
+        {Array.from({ length: 15 }).map((_, i) => (
+          <View key={i} style={styles.tearTriangle} />
+        ))}
+      </View>
+    </View>
+    <Text style={styles.livePreviewLabel}>Live Preview</Text>
+  </View>
+);
+
 const ReceiptSettingsModal: React.FC<ReceiptSettingsModalProps> = ({
   visible,
   onClose,
@@ -69,63 +138,6 @@ const ReceiptSettingsModal: React.FC<ReceiptSettingsModalProps> = ({
     }
   };
 
-  const ReceiptPreview = () => (
-    <View style={styles.previewContainer}>
-      <View style={styles.previewPaper}>
-        {/* Paper texture effect */}
-        <View style={styles.previewHeader}>
-          <View style={styles.previewLogoPlaceholder}>
-             <Icon name="store" size={24} color="#CBD5E1" />
-          </View>
-          <Text style={styles.previewTitle}>{restaurantName || 'Restaurant Name'}</Text>
-          <Text style={styles.previewText}>Amman, Jordan</Text>
-          <Text style={styles.previewText}>+962 79 123 4567</Text>
-        </View>
-
-        <View style={styles.previewDivider}>
-           <Text style={styles.previewDividerText}>--------------------------------</Text>
-        </View>
-
-        <View style={styles.previewRow}>
-           <Text style={styles.previewText}>Order #1024</Text>
-           <Text style={styles.previewText}>12:30 PM</Text>
-        </View>
-
-        <View style={styles.previewDivider}>
-           <Text style={styles.previewDividerText}>--------------------------------</Text>
-        </View>
-
-        <View style={styles.previewItemRow}>
-           <Text style={styles.previewItemName}>1x Latte</Text>
-           <Text style={styles.previewItemPrice}>3.50</Text>
-        </View>
-         <View style={styles.previewItemRow}>
-           <Text style={styles.previewItemName}>1x Cheesecake</Text>
-           <Text style={styles.previewItemPrice}>4.00</Text>
-        </View>
-
-        <View style={[styles.previewDivider, { marginTop: 10 }]}>
-           <Text style={styles.previewDividerText}>--------------------------------</Text>
-        </View>
-
-        <View style={styles.previewTotalRow}>
-           <Text style={styles.previewTotalLabel}>TOTAL</Text>
-           <Text style={styles.previewTotalValue}>7.50 JOD</Text>
-        </View>
-        
-        <View style={styles.previewFooter}>
-            <Text style={styles.previewFooterText}>{farewellMessage || 'Thank you for your visit!'}</Text>
-        </View>
-         <View style={styles.tearLine}>
-            {Array.from({ length: 15 }).map((_, i) => (
-                <View key={i} style={styles.tearTriangle} />
-            ))}
-        </View>
-      </View>
-      <Text style={[styles.previewLabel, { color: COLORS.textSecondary }]}>Live Preview</Text>
-    </View>
-  );
-
   return (
     <Modal
       visible={visible}
@@ -136,72 +148,79 @@ const ReceiptSettingsModal: React.FC<ReceiptSettingsModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        
+
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <View style={[styles.modalContent, { backgroundColor: COLORS.surface }]}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
             <View style={styles.header}>
-              <Text style={[styles.title, { color: COLORS.textPrimary }]}>Receipt Settings</Text>
+              <Text style={styles.title}>Receipt Settings</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Icon name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              style={styles.scrollView} 
+            <ScrollView
+              style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={true}
               bounces={true}
               keyboardShouldPersistTaps="handled"
             >
-              <ReceiptPreview />
+              <ReceiptPreview
+                restaurantName={restaurantName}
+                farewellMessage={farewellMessage}
+                styles={styles}
+                colors={COLORS}
+              />
 
               <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: COLORS.textSecondary }]}>Restaurant Name</Text>
+                <Text style={styles.label}>Restaurant Name</Text>
                 <TextInput
-                  style={[styles.input, { color: COLORS.textPrimary, backgroundColor: COLORS.background, borderColor: COLORS.border }]}
+                  style={styles.input}
                   value={restaurantName}
                   onChangeText={setRestaurantName}
                   placeholder="Enter restaurant name"
                   placeholderTextColor={COLORS.textTertiary}
                 />
-                <Text style={[styles.hint, { color: COLORS.textTertiary }]}>Appears at the top of your receipt</Text>
+                <Text style={styles.hint}>Appears at the top of your receipt</Text>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: COLORS.textSecondary }]}>Footer Message</Text>
+                <Text style={styles.label}>Footer Message</Text>
                 <TextInput
-                  style={[styles.input, { color: COLORS.textPrimary, backgroundColor: COLORS.background, borderColor: COLORS.border, height: 80 }]}
+                  style={[styles.input, styles.textArea]}
                   value={farewellMessage}
                   onChangeText={setFarewellMessage}
                   placeholder="e.g. Thank you, come again!"
                   placeholderTextColor={COLORS.textTertiary}
                   multiline
                 />
-                <Text style={[styles.hint, { color: COLORS.textTertiary }]}>Appears at the bottom of the receipt</Text>
+                <Text style={styles.hint}>Appears at the bottom of the receipt</Text>
               </View>
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: COLORS.border }]}>
-               <TouchableOpacity 
-                  style={[styles.cancelButton, { borderColor: COLORS.border }]}
-                  onPress={onClose}
-               >
-                  <Text style={[styles.cancelButtonText, { color: COLORS.textSecondary }]}>Cancel</Text>
-               </TouchableOpacity>
-               <TouchableOpacity 
-                  style={[styles.saveButton, { backgroundColor: COLORS.primary }]}
-                  onPress={handleSave}
-                  disabled={loading}
-               >
-                  {loading ? (
-                      <ActivityIndicator color="#FFF" size="small" />
-                  ) : (
-                      <Text style={styles.saveButtonText}>Save</Text>
-                  )}
-               </TouchableOpacity>
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -221,22 +240,35 @@ const createStyles = (colors: any) => StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   keyboardAvoidingView: {
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '85%',
+    width: '100%',
+    maxWidth: 600,
+    flex: 1,
+    justifyContent: 'center',
   },
   modalContent: {
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: 32,
+    paddingTop: 12, // Reduced for handle
+    paddingHorizontal: 24,
+    paddingBottom: 0,
     width: '100%',
-    maxHeight: '100%',
-    flexShrink: 1,
+    maxHeight: '85%',
+    minHeight: 400,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 24,
     overflow: 'hidden',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -247,6 +279,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
+    color: colors.textPrimary,
   },
   closeButton: {
     padding: 4,
@@ -260,6 +293,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   previewContainer: {
     alignItems: 'center',
     marginBottom: 24,
+  },
+  livePreviewLabel: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   previewPaper: {
     width: 260,
@@ -309,8 +348,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   previewDividerText: {
     fontSize: 10,
-     color: '#CBD5E1',
-     letterSpacing: 2
+    color: '#CBD5E1',
+    letterSpacing: 2
   },
   previewRow: {
     flexDirection: 'row',
@@ -323,30 +362,30 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: 4,
   },
   previewItemName: {
-     fontSize: 12,
-     color: '#334155',
-     fontWeight: '500'
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '500'
   },
   previewItemPrice: {
-     fontSize: 12,
-     color: '#334155',
-     fontWeight: '600'
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '600'
   },
   previewTotalRow: {
-     flexDirection: 'row',
-     justifyContent: 'space-between',
-     marginTop: 4,
-     marginBottom: 12
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 12
   },
   previewTotalLabel: {
-     fontSize: 13,
-     fontWeight: '800',
-     color: '#0F172A'
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A'
   },
   previewTotalValue: {
-     fontSize: 13,
-     fontWeight: '800',
-     color: '#0F172A'
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A'
   },
   previewFooter: {
     alignItems: 'center',
@@ -359,21 +398,21 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontStyle: 'italic'
   },
   tearLine: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 8,
-      flexDirection: 'row',
-      overflow: 'hidden'
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 8,
+    flexDirection: 'row',
+    overflow: 'hidden'
   },
   tearTriangle: {
-      width: 16,
-      height: 16,
-      backgroundColor: '#f1f5f9', // Match background or slightly darker
-      transform: [{ rotate: '45deg' }],
-      top: 4,
-      marginRight: 2
+    width: 16,
+    height: 16,
+    backgroundColor: '#f1f5f9', // Match background or slightly darker
+    transform: [{ rotate: '45deg' }],
+    top: 4,
+    marginRight: 2
   },
   previewLabel: {
     marginTop: 10,
@@ -387,6 +426,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+    color: colors.textSecondary,
   },
   input: {
     borderWidth: 1,
@@ -394,16 +434,25 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+  },
+  textArea: {
+    height: 80,
   },
   hint: {
     fontSize: 11,
     marginTop: 4,
+    color: colors.textTertiary,
   },
   footer: {
     flexDirection: 'row',
     borderTopWidth: 1,
     paddingTop: 16,
+    paddingBottom: 24,
     gap: 12,
+    borderTopColor: colors.border,
   },
   cancelButton: {
     flex: 1,
@@ -412,10 +461,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    borderColor: colors.border,
   },
   cancelButtonText: {
     fontSize: 15,
     fontWeight: '600',
+    color: colors.textSecondary,
   },
   saveButton: {
     flex: 1,
@@ -423,6 +474,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primary,
   },
   saveButtonText: {
     color: '#FFF',

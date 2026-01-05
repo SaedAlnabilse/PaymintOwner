@@ -87,31 +87,17 @@ export const checkAuthStatus = createAsyncThunk(
         return { token: null, user: null, tenant };
       }
 
-      console.log('🔐 Found stored session, verifying token validity...');
-      // Try to verify token is still valid
-      try {
-        const profileResponse = await authService.getProfile();
-        console.log('🔐 Token is valid, user authenticated');
-        return {
-          token,
-          user: profileResponse,
-          tenant
-        };
-      } catch (apiError: any) {
-        const status = apiError.response?.status;
-        if (status === 401) {
-          console.log('🔐 Token is invalid (401), clearing stored user data');
-          await authService.clearToken();
-          await authService.clearUser();
-          return { token: null, user: null, tenant };
-        }
+      console.log('🔐 Found stored session, trusting token...');
+      
+      // OPTIMISTIC AUTH: Trust the stored token immediately.
+      // We removed the background getProfile() call to prevent race conditions 
+      // where headers aren't set yet, which was causing accidental logouts.
 
-        return {
-          token,
-          user,
-          tenant
-        };
-      }
+      return {
+        token,
+        user,
+        tenant
+      };
     } catch (error: any) {
       console.log('🔐 Authentication check failed:', error.message);
       return rejectWithValue('Authentication check failed');

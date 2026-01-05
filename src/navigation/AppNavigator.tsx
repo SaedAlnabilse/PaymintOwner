@@ -7,19 +7,20 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme as usePaperTheme } from 'react-native-paper';
 
 import LoginScreen from '../screens/LoginScreen';
-import SetupScreen from '../screens/SetupScreen'; // Import SetupScreen
 import TenantSelectionScreen from '../screens/TenantSelectionScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ReportsScreen from '../screens/ReportsScreen';
-import InventoryScreen from '../screens/InventoryScreen';
-import CategoriesScreen from '../screens/CategoriesScreen'; // Import CategoriesScreen
+import ProductManagementScreen from '../screens/ProductManagementScreen';
 import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CustomersScreen from '../screens/CustomersScreen';
-import PromotionsScreen from '../screens/PromotionsScreen';
 import AuditLogScreen from '../screens/AuditLogScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import CustomDrawerContent from '../components/CustomDrawerContent';
+
+import ManufacturingInventoryScreen from '../screens/ManufacturingInventoryScreen';
+import RecipeManagementScreen from '../screens/RecipeManagementScreen';
+import SalesSettingsScreen from '../screens/SalesSettingsScreen';
 
 import { RootState, AppDispatch } from '../store/store';
 import { checkAuthStatus } from '../store/slices/authSlice';
@@ -88,7 +89,7 @@ const DrawerNavigator = () => {
         name="Reports"
         component={ReportsScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="chart-bar" size={22} color={color} />
           ),
           title: 'Reports & Analytics'
@@ -98,37 +99,27 @@ const DrawerNavigator = () => {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="view-dashboard-outline" size={22} color={color} />
           ),
           title: 'Dashboard'
         }}
       />
       <Drawer.Screen
-        name="Inventory"
-        component={InventoryScreen}
+        name="Products"
+        component={ProductManagementScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="package-variant-closed" size={22} color={color} />
           ),
-          title: 'Inventory Command'
-        }}
-      />
-      <Drawer.Screen
-        name="Categories"
-        component={CategoriesScreen}
-        options={{
-          drawerIcon: ({ color, size }) => (
-            <Icon name="shape-outline" size={22} color={color} />
-          ),
-          title: 'Categories'
+          title: 'Product Catalog'
         }}
       />
       <Drawer.Screen
         name="Staff"
         component={StaffScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="account-group-outline" size={22} color={color} />
           ),
           title: 'Staff Management'
@@ -138,27 +129,18 @@ const DrawerNavigator = () => {
         name="Customers"
         component={CustomersScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="account-heart-outline" size={22} color={color} />
           ),
           title: 'Customers & Loyalty'
         }}
       />
-      <Drawer.Screen
-        name="Discounts"
-        component={PromotionsScreen}
-        options={{
-          drawerIcon: ({ color, size }) => (
-            <Icon name="tag-outline" size={22} color={color} />
-          ),
-          title: 'Discounts'
-        }}
-      />
+
       <Drawer.Screen
         name="AuditLog"
         component={AuditLogScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="shield-check-outline" size={22} color={color} />
           ),
           title: 'Activity Logs'
@@ -168,17 +150,47 @@ const DrawerNavigator = () => {
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="alert-circle-outline" size={22} color={color} />
           ),
           title: 'Cash Alerts'
         }}
       />
       <Drawer.Screen
+        name="Manufacturing"
+        component={ManufacturingInventoryScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="barrel" size={22} color={color} />
+          ),
+          title: 'Raw Materials'
+        }}
+      />
+      <Drawer.Screen
+        name="Recipes"
+        component={RecipeManagementScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="food-variant" size={22} color={color} />
+          ),
+          title: 'Recipe Management'
+        }}
+      />
+      <Drawer.Screen
+        name="SalesManagement"
+        component={SalesSettingsScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="cash-register" size={22} color={color} />
+          ),
+          title: 'Sales Management'
+        }}
+      />
+      <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
+          drawerIcon: ({ color }) => (
             <Icon name="cog-outline" size={22} color={color} />
           ),
           title: 'Settings'
@@ -213,7 +225,6 @@ const AppNavigator = () => {
         <Stack.Screen name="Main" component={DrawerNavigator} />
       ) : (
         <>
-          <Stack.Screen name="Setup" component={SetupScreen} />
           {!selectedTenant ? (
             <Stack.Screen name="TenantSelection" component={TenantSelectionScreen} />
           ) : (

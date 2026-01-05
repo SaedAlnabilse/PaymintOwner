@@ -29,12 +29,14 @@ const StoreProfileModal: React.FC<StoreProfileModalProps> = ({ visible, onClose,
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        
+
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
             <View style={styles.header}>
               <Text style={styles.title}>Store Profile</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -42,8 +44,8 @@ const StoreProfileModal: React.FC<StoreProfileModalProps> = ({ visible, onClose,
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              style={styles.scrollView} 
+            <ScrollView
+              style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={true}
               bounces={true}
@@ -112,29 +114,41 @@ const createStyles = (colors: any) => StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   keyboardAvoidingView: {
-    width: '90%',
-    maxWidth: 420,
-    maxHeight: '85%',
+    width: '100%',
+    maxWidth: 600,
+    flex: 1,
+    justifyContent: 'center',
   },
   modalContent: {
-    width: '100%',
     backgroundColor: colors.surface,
-    borderRadius: 20,
-    overflow: 'hidden',
-    maxHeight: '100%',
+    borderRadius: 32,
+    paddingTop: 12, // Reduced for handle
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    width: '100%',
+    maxHeight: '85%',
+    minHeight: 400,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 24,
+    overflow: 'hidden',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 20,
   },
   title: {
     fontSize: 22,

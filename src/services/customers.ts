@@ -168,16 +168,40 @@ export const searchCustomers = async (query: string): Promise<Customer[]> => {
     return response.data;
 };
 
-import { Share, Alert } from 'react-native';
+import { Share, Alert, Platform, PermissionsAndroid } from 'react-native';
+import RNFS from 'react-native-fs';
+import moment from 'moment-timezone';
 
 /**
- * Share customers list as CSV text
+ * Share customers list as CSV file saved to device
  */
 export const shareCustomersReport = async (customers: Customer[]) => {
     try {
         if (!customers || customers.length === 0) {
             Alert.alert('No Data', 'There are no customers to export.');
             return;
+        }
+
+        // Request storage permission on Android
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                    {
+                        title: 'Storage Permission',
+                        message: 'This app needs access to storage to save CSV files.',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    }
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Alert.alert('Permission Denied', 'Storage permission is required to save files.');
+                    return false;
+                }
+            } catch (err) {
+                console.warn('Permission request error:', err);
+            }
         }
 
         // 1. Create CSV Header
@@ -213,19 +237,46 @@ export const shareCustomersReport = async (customers: Customer[]) => {
         // 3. Combine
         const csvContent = `${headers}\n${rows}`;
 
-        // 4. Share
-        await Share.share({
-            title: 'Customer List',
-            message: csvContent,
-        }, {
-            dialogTitle: 'Export Customer List',
-            subject: 'customers.csv'
-        });
+        // 4. Create filename with timestamp
+        const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
+        const filename = `Customers_${timestamp}.csv`;
+
+        // 5. Determine file path
+        const downloadPath = Platform.OS === 'ios' 
+            ? RNFS.DocumentDirectoryPath 
+            : RNFS.DownloadDirectoryPath;
+        
+        const filePath = `${downloadPath}/${filename}`;
+
+        // 6. Write file
+        await RNFS.writeFile(filePath, csvContent, 'utf8');
+
+        // 7. Show success message and share
+        Alert.alert(
+            'Export Successful', 
+            `CSV file saved to:\n${Platform.OS === 'ios' ? 'Files app' : 'Downloads folder'}\n\nFilename: ${filename}`,
+            [
+                {
+                    text: 'Share',
+                    onPress: async () => {
+                        try {
+                            await Share.share({
+                                title: 'Customer List',
+                                url: Platform.OS === 'ios' ? `file://${filePath}` : filePath,
+                            });
+                        } catch (shareError) {
+                            console.error('Share error:', shareError);
+                        }
+                    }
+                },
+                { text: 'OK', style: 'default' }
+            ]
+        );
 
         return true;
     } catch (error) {
         console.error('Export failed:', error);
-        Alert.alert('Export Failed', 'Could not share the list.');
+        Alert.alert('Export Failed', `Could not save the customer list: ${(error as Error).message || 'Unknown error'}`);
         return false;
     }
 };

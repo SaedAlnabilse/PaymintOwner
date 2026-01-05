@@ -4,21 +4,22 @@ export interface Category {
   id: string;
   name: string;
   icon?: string;
-  isActive: boolean;
-  sortOrder: number;
+  color?: string;
+  itemCount?: number;
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface CreateCategoryDto {
   name: string;
   icon?: string;
-  sortOrder?: number;
+  color?: string;
 }
 
 export interface UpdateCategoryDto {
   name?: string;
   icon?: string;
-  isActive?: boolean;
-  sortOrder?: number;
+  color?: string;
 }
 
 class CategoriesService {
@@ -27,7 +28,7 @@ class CategoriesService {
       const response = await apiClient.get('/api/categories');
       return response.data;
     } catch (error: any) {
-      console.error('Failed to get categories:', error.response?.data || error.message);
+      console.error('Failed to fetch categories:', error);
       throw error;
     }
   }
@@ -37,7 +38,7 @@ class CategoriesService {
       const response = await apiClient.post('/api/categories', data);
       return response.data;
     } catch (error: any) {
-      console.error('Failed to create category:', error.response?.data || error.message);
+      console.error('Failed to create category:', error);
       throw error;
     }
   }
@@ -47,7 +48,7 @@ class CategoriesService {
       const response = await apiClient.patch(`/api/categories/${id}`, data);
       return response.data;
     } catch (error: any) {
-      console.error('Failed to update category:', error.response?.data || error.message);
+      console.error('Failed to update category:', error);
       throw error;
     }
   }
@@ -56,7 +57,7 @@ class CategoriesService {
     try {
       await apiClient.delete(`/api/categories/${id}`);
     } catch (error: any) {
-      console.error('Failed to delete category:', error.response?.data || error.message);
+      console.error('Failed to delete category:', error);
       throw error;
     }
   }

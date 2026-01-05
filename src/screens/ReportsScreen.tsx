@@ -456,7 +456,7 @@ const ReportsScreen = () => {
     if (selectedRange === 'today') periodLabel = moment().format('YYYY-MM-DD');
     else if (selectedRange === 'yesterday') periodLabel = `Yesterday ${moment().subtract(1, 'd').format('YYYY-MM-DD')}`;
     else if (selectedRange === 'thisMonth') periodLabel = moment().format('MMMM YYYY');
-    
+
     // Pass filteredOrders to export specifically what the user sees
     await shareOrdersReport(filteredOrders, periodLabel);
   };
@@ -488,14 +488,37 @@ const ReportsScreen = () => {
           <Text style={styles.headerTitle}>Reports</Text>
         </View>
         <View style={styles.headerActions}>
-          {/* Employee Filter */}
-          <TouchableOpacity
-            style={[styles.filterButton, selectedEmployee && styles.filterButtonActive]}
-            onPress={() => setShowEmployeeDropdown(true)}
-          >
-            <Icon name="users" size={18} color={selectedEmployee ? COLORS.white : COLORS.textPrimary} />
-            {selectedEmployee && <View style={styles.filterBadge} />}
-          </TouchableOpacity>
+          {/* Employee Filter - Only show if NO employee is selected */}
+          {!selectedEmployee && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setShowEmployeeDropdown(true)}
+            >
+              <Icon name="users" size={18} color={COLORS.textPrimary} />
+            </TouchableOpacity>
+          )}
+
+          {/* Selected Employee Pill - Show only when an employee IS selected */}
+          {selectedEmployee && (
+            <TouchableOpacity
+              style={[styles.filterPill, { backgroundColor: COLORS.primary }]}
+              onPress={() => setShowEmployeeDropdown(true)}
+            >
+              <Text style={styles.filterPillText}>
+                {employees.find(e => e.id === selectedEmployee)?.name || 'User'}
+              </Text>
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setSelectedEmployee(null);
+                  setSelectedShift(null);
+                }}
+                style={styles.pillClearButton}
+              >
+                <Icon name="x" size={14} color={COLORS.white} />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
           {/* Shift Filter (Only if employee selected) */}
           {selectedEmployee && (
@@ -542,7 +565,13 @@ const ReportsScreen = () => {
                 <TouchableOpacity
                   key={emp.id}
                   style={styles.dropdownItem}
-                  onPress={() => { setSelectedEmployee(emp.id); setSelectedShift(null); setShowEmployeeDropdown(false); }}
+                  onPress={() => {
+                    setSelectedEmployee(emp.id);
+                    setSelectedShift(null);
+                    setShowEmployeeDropdown(false);
+                    // Always switch to overview tab when selecting an employee
+                    setReportType('overview');
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.dropdownItemText, selectedEmployee === emp.id && styles.dropdownItemTextActive]}>{emp.name}</Text>
@@ -771,7 +800,13 @@ const ReportsScreen = () => {
             { id: 'items', label: 'Sales by Item', icon: 'shopping-basket' },
             { id: 'employees', label: 'Sales by Employee', icon: 'people' },
             { id: 'receipts', label: 'Receipts', icon: 'receipt' },
-          ].map((tab) => (
+          ].filter(tab => {
+            // Hide "Sales by Employee" tab when filtering by a specific employee
+            if (tab.id === 'employees' && selectedEmployee) {
+              return false;
+            }
+            return true;
+          }).map((tab) => (
             <TouchableOpacity
               key={tab.id}
               style={[
@@ -1140,7 +1175,7 @@ const ReportsScreen = () => {
           <View style={styles.content}>
             <View style={[styles.sectionHeader, { marginTop: 0 }]}>
               <Text style={styles.sectionTitle}>Receipts</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 onPress={handleExport}
               >
@@ -1269,6 +1304,29 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.green,
     borderWidth: 1,
     borderColor: colors.white
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  filterPillText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pillClearButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerSubtitle: {
     fontSize: 12,

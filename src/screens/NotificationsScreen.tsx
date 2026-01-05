@@ -432,32 +432,51 @@ const NotificationsScreen = () => {
     <ScreenContainer style={styles.container}>
       {/* Fixed Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerSubtitle}>FINANCIAL MONITORING</Text>
-          <Text style={styles.headerTitle}>Cash Alerts</Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTagline}>FINANCIAL MONITORING</Text>
+            <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Cash Alerts</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => {
+                console.log('🧪 Testing notification...');
+                pushNotificationService.showCashAlert(
+                  'Test Cash Alert',
+                  'This is a test notification to verify push notifications are working',
+                  { test: true }
+                );
+              }}
+              style={[styles.refreshButton, { marginRight: 8 }]}
+              activeOpacity={0.7}
+            >
+              <Icon name="bell" size={22} color={COLORS.orange} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleRefresh}
+              style={styles.refreshButton}
+              activeOpacity={0.7}
+            >
+              <Icon name="refresh-cw" size={22} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => {
-              console.log('🧪 Testing notification...');
-              pushNotificationService.showCashAlert(
-                'Test Cash Alert',
-                'This is a test notification to verify push notifications are working',
-                { test: true }
-              );
-            }}
-            style={[styles.refreshButton, { marginRight: 8 }]}
-            activeOpacity={0.7}
-          >
-            <Icon name="bell" size={22} color={COLORS.orange} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleRefresh}
-            style={styles.refreshButton}
-            activeOpacity={0.7}
-          >
-            <Icon name="refresh-cw" size={22} color={COLORS.primary} />
-          </TouchableOpacity>
+
+        {/* Stats Bar */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={[styles.headerStatValue, { color: COLORS.textPrimary }]}>
+              {cashAlertNotifications.length}
+            </Text>
+            <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Total Alerts</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.headerStatValue, { color: COLORS.orange }]}>
+              {cashAlertNotifications.filter(n => n.isNew).length}
+            </Text>
+            <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Unread</Text>
+          </View>
         </View>
       </View>
 
@@ -559,34 +578,54 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 10,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20, // Reduced since SafeAreaView now handles the top spacing
-    paddingBottom: 24,
+    marginBottom: 14,
   },
-  headerSubtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: 1,
+  headerTagline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 1.5,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
+  headerTitle: { fontSize: 24, fontWeight: '800' },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  statItem: { alignItems: 'center' },
+  headerStatValue: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  headerStatLabel: { fontSize: 10, fontWeight: '600' },
+  statDivider: { width: 1, height: 24, backgroundColor: colors.borderLight },
   refreshButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.containerGray,

@@ -10,8 +10,6 @@ import {
   RefreshControl,
   Modal,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -33,10 +31,12 @@ import {
   CustomerOrder,
 } from '../services/customers';
 import moment from 'moment-timezone';
+import CustomerFormModal from '../components/customers/CustomerFormModal';
 
 const CustomersScreen = () => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
+  const styles = createStyles(COLORS);
 
   // State
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -171,51 +171,21 @@ const CustomersScreen = () => {
     setEditModalVisible(true);
   };
 
-  // Validate form
-  const validateForm = (): boolean => {
-    const errors: { name?: string; phone?: string } = {};
-
-    if (!formName.trim()) {
-      errors.name = 'Name is required';
-    }
-
-    if (!formPhone.trim()) {
-      errors.phone = 'Phone is required';
-    } else if (!/^\+?[\d\s-]{8,}$/.test(formPhone)) {
-      errors.phone = 'Invalid phone number';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   // Save customer
-  const handleSaveCustomer = async () => {
-    if (!validateForm()) return;
-
-    setSaving(true);
+  const handleSaveCustomer = async (data: any) => {
     try {
       if (editingCustomer) {
-        await updateCustomer(editingCustomer.id, {
-          name: formName.trim(),
-          phone: formPhone.trim(),
-          email: formEmail.trim() || undefined,
-        });
+        await updateCustomer(editingCustomer.id, data);
         Alert.alert('Success', 'Customer updated successfully');
       } else {
-        await createCustomer({
-          name: formName.trim(),
-          phone: formPhone.trim(),
-          email: formEmail.trim() || undefined,
-        });
+        await createCustomer(data);
         Alert.alert('Success', 'Customer added successfully');
       }
-      setEditModalVisible(false);
+      // setEditModalVisible(false); // Modal handles closing
       fetchData(true);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Failed to save customer');
-    } finally {
-      setSaving(false);
+      throw error; // Let modal handle loading state if needed
     }
   };
 
@@ -272,1762 +242,1223 @@ const CustomersScreen = () => {
     </TouchableOpacity>
   );
 
-      // Customer Detail Modal
+  // Customer Detail Modal
 
-      const CustomerDetailModal = () => (
+  const CustomerDetailModal = () => (
 
-        <Modal
+    <Modal
 
-          visible={customerModalVisible}
+      visible={customerModalVisible}
 
-          transparent
+      transparent
 
-          animationType="fade"
+      animationType="fade"
 
-          statusBarTranslucent
+      statusBarTranslucent
 
-          onRequestClose={() => setCustomerModalVisible(false)}
+      onRequestClose={() => setCustomerModalVisible(false)}
 
-        >
+    >
 
-          <View style={styles.modalOverlay}>
+      <View style={styles.modalOverlay}>
 
-            <Pressable style={styles.backdrop} onPress={() => setCustomerModalVisible(false)} />
+        <Pressable style={styles.backdrop} onPress={() => setCustomerModalVisible(false)} />
 
-            
 
-            <KeyboardAvoidingView
 
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <View style={[styles.modalContent, { backgroundColor: COLORS.cardBackground }]}>
 
-              style={styles.modalKeyboardView}
+          <View style={styles.modalHeader}>
+
+            <TouchableOpacity
+
+              onPress={() => setCustomerModalVisible(false)}
+
+              style={styles.closeButton}
 
             >
 
-              <View style={[styles.modalContent, { backgroundColor: COLORS.cardBackground }]}>
+              <Icon name="close" size={24} color={COLORS.textSecondary} />
 
-                <View style={styles.modalHeader}>
+            </TouchableOpacity>
+
+            <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>Customer Details</Text>
+
+            <View style={{ width: 24 }} />
+
+          </View>
+
+
+
+          <ScrollView
+
+            style={styles.scrollView}
+
+            contentContainerStyle={styles.scrollContent}
+
+            showsVerticalScrollIndicator={true}
+
+            bounces={true}
+
+          >
+
+            {selectedCustomer && (
+
+              <>
+
+                {/* Customer Info */}
+
+                <View style={styles.customerInfo}>
+
+                  <View style={[styles.largeAvatar, { backgroundColor: COLORS.primary }]}>
+
+                    <Text style={styles.largeAvatarText}>
+
+                      {selectedCustomer.name.charAt(0).toUpperCase()}
+
+                    </Text>
+
+                  </View>
+
+                  <Text style={[styles.customerName, { color: COLORS.textPrimary }]}>
+
+                    {selectedCustomer.name}
+
+                  </Text>
+
+                  <View style={[styles.tierBadge, { backgroundColor: getTierColor(selectedCustomer.tier) + '20' }]}>
+
+                    <Text style={[styles.tierText, { color: getTierColor(selectedCustomer.tier) }]}>
+
+                      {selectedCustomer.tier} Member
+
+                    </Text>
+
+                  </View>
 
                   <TouchableOpacity
 
-                    onPress={() => setCustomerModalVisible(false)}
+                    style={[styles.editCustomerButton, { backgroundColor: COLORS.primary + '15' }]}
 
-                    style={styles.closeButton}
+                    onPress={() => {
+
+                      setCustomerModalVisible(false);
+
+                      openEditCustomerModal(selectedCustomer);
+
+                    }}
 
                   >
 
-                    <Icon name="close" size={24} color={COLORS.textSecondary} />
+                    <Icon name="pencil" size={16} color={COLORS.primary} />
+
+                    <Text style={[styles.editCustomerButtonText, { color: COLORS.primary }]}>Edit Customer</Text>
 
                   </TouchableOpacity>
 
-                  <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>Customer Details</Text>
+                </View>
 
-                  <View style={{ width: 24 }} />
+
+
+                {/* Contact Info */}
+
+                <View style={[styles.section, { borderColor: COLORS.borderLight }]}>
+
+                  <View style={styles.infoRow}>
+
+                    <Icon name="phone" size={20} color={COLORS.textSecondary} />
+
+                    <Text style={[styles.infoText, { color: COLORS.textPrimary }]}>{selectedCustomer.phone}</Text>
+
+                  </View>
+
+                  <View style={styles.infoRow}>
+
+                    <Icon name="calendar" size={20} color={COLORS.textSecondary} />
+
+                    <Text style={[styles.infoText, { color: COLORS.textPrimary }]}>
+
+                      Member since {moment(selectedCustomer.joinDate).format('MMM D, YYYY')}
+
+                    </Text>
+
+                  </View>
 
                 </View>
 
-    
 
-                <ScrollView 
 
-                  style={styles.scrollView} 
+                {/* Stats Grid */}
 
-                  contentContainerStyle={styles.scrollContent}
+                <View style={styles.statsGrid}>
 
-                  showsVerticalScrollIndicator={true}
+                  <View style={[styles.statCard, { backgroundColor: COLORS.primary + '10' }]}>
 
-                  bounces={true}
+                    <Icon name="star" size={24} color={COLORS.primary} />
 
-                  keyboardShouldPersistTaps="handled"
+                    <Text style={[styles.statCardValue, { color: COLORS.primary }]}>{selectedCustomer.points}</Text>
 
-                >
+                    <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Points</Text>
 
-                  {selectedCustomer && (
+                  </View>
 
-                    <>
+                  <View style={[styles.statCard, { backgroundColor: COLORS.success + '10' }]}>
 
-                      {/* Customer Info */}
+                    <Icon name="cash" size={24} color={COLORS.success} />
 
-                      <View style={styles.customerInfo}>
+                    <Text style={[styles.statCardValue, { color: COLORS.success }]}>
 
-                        <View style={[styles.largeAvatar, { backgroundColor: COLORS.primary }]}>
+                      {formatCurrency(selectedCustomer.totalSpent)}
 
-                          <Text style={styles.largeAvatarText}>
+                    </Text>
 
-                            {selectedCustomer.name.charAt(0).toUpperCase()}
+                    <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Spent</Text>
 
-                          </Text>
+                  </View>
 
-                        </View>
+                  <View style={[styles.statCard, { backgroundColor: COLORS.blue + '10' }]}>
 
-                        <Text style={[styles.customerName, { color: COLORS.textPrimary }]}>
+                    <Icon name="store" size={24} color={COLORS.blue} />
 
-                          {selectedCustomer.name}
+                    <Text style={[styles.statCardValue, { color: COLORS.blue }]}>{selectedCustomer.totalOrders ?? selectedCustomer.totalVisits}</Text>
+
+                    <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Visits</Text>
+
+                  </View>
+
+                </View>
+
+
+
+                {/* Order History */}
+
+                <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Order History</Text>
+
+                {loadingOrders ? (
+
+                  <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 20 }} />
+
+                ) : customerOrders.length > 0 ? (
+
+                  customerOrders.map(order => (
+
+                    <View key={order.id} style={[styles.orderCard, { backgroundColor: COLORS.background }]}>
+
+                      <View style={styles.orderHeader}>
+
+                        <Text style={[styles.orderNumber, { color: COLORS.textPrimary }]}>
+
+                          #{order.orderNumber}
 
                         </Text>
 
-                        <View style={[styles.tierBadge, { backgroundColor: getTierColor(selectedCustomer.tier) + '20' }]}>
+                        <Text style={[styles.orderTotal, { color: COLORS.success }]}>
 
-                          <Text style={[styles.tierText, { color: getTierColor(selectedCustomer.tier) }]}>
-
-                            {selectedCustomer.tier} Member
-
-                          </Text>
-
-                        </View>
-
-                        <TouchableOpacity
-
-                          style={[styles.editCustomerButton, { backgroundColor: COLORS.primary + '15' }]}
-
-                          onPress={() => {
-
-                            setCustomerModalVisible(false);
-
-                            openEditCustomerModal(selectedCustomer);
-
-                          }}
-
-                        >
-
-                          <Icon name="pencil" size={16} color={COLORS.primary} />
-
-                          <Text style={[styles.editCustomerButtonText, { color: COLORS.primary }]}>Edit Customer</Text>
-
-                        </TouchableOpacity>
-
-                      </View>
-
-    
-
-                      {/* Contact Info */}
-
-                      <View style={[styles.section, { borderColor: COLORS.borderLight }]}>
-
-                        <View style={styles.infoRow}>
-
-                          <Icon name="phone" size={20} color={COLORS.textSecondary} />
-
-                          <Text style={[styles.infoText, { color: COLORS.textPrimary }]}>{selectedCustomer.phone}</Text>
-
-                        </View>
-
-                        <View style={styles.infoRow}>
-
-                          <Icon name="calendar" size={20} color={COLORS.textSecondary} />
-
-                          <Text style={[styles.infoText, { color: COLORS.textPrimary }]}>
-
-                            Member since {moment(selectedCustomer.joinDate).format('MMM D, YYYY')}
-
-                          </Text>
-
-                        </View>
-
-                      </View>
-
-    
-
-                      {/* Stats Grid */}
-
-                      <View style={styles.statsGrid}>
-
-                        <View style={[styles.statCard, { backgroundColor: COLORS.primary + '10' }]}>
-
-                          <Icon name="star" size={24} color={COLORS.primary} />
-
-                          <Text style={[styles.statCardValue, { color: COLORS.primary }]}>{selectedCustomer.points}</Text>
-
-                          <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Points</Text>
-
-                        </View>
-
-                        <View style={[styles.statCard, { backgroundColor: COLORS.success + '10' }]}>
-
-                          <Icon name="cash" size={24} color={COLORS.success} />
-
-                          <Text style={[styles.statCardValue, { color: COLORS.success }]}>
-
-                            {formatCurrency(selectedCustomer.totalSpent)}
-
-                          </Text>
-
-                          <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Spent</Text>
-
-                        </View>
-
-                        <View style={[styles.statCard, { backgroundColor: COLORS.blue + '10' }]}>
-
-                          <Icon name="store" size={24} color={COLORS.blue} />
-
-                          <Text style={[styles.statCardValue, { color: COLORS.blue }]}>{selectedCustomer.totalOrders ?? selectedCustomer.totalVisits}</Text>
-
-                          <Text style={[styles.statCardLabel, { color: COLORS.textSecondary }]}>Visits</Text>
-
-                        </View>
-
-                      </View>
-
-    
-
-                      {/* Order History */}
-
-                      <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Order History</Text>
-
-                      {loadingOrders ? (
-
-                        <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 20 }} />
-
-                      ) : customerOrders.length > 0 ? (
-
-                        customerOrders.map(order => (
-
-                          <View key={order.id} style={[styles.orderCard, { backgroundColor: COLORS.background }]}>
-
-                            <View style={styles.orderHeader}>
-
-                              <Text style={[styles.orderNumber, { color: COLORS.textPrimary }]}>
-
-                                #{order.orderNumber}
-
-                              </Text>
-
-                              <Text style={[styles.orderTotal, { color: COLORS.success }]}>
-
-                                {formatCurrency(order.total)}
-
-                              </Text>
-
-                            </View>
-
-                            <Text style={[styles.orderDate, { color: COLORS.textSecondary }]}>
-
-                              {moment(order.createdAt).format('MMM D, YYYY h:mm A')}
-
-                            </Text>
-
-                            <View style={styles.orderItems}>
-
-                              {order.items.slice(0, 3).map((item, idx) => (
-
-                                <Text key={idx} style={[styles.orderItemText, { color: COLORS.textSecondary }]}>
-
-                                  {item.quantity}x {item.name}
-
-                                </Text>
-
-                              ))}
-
-                              {order.items.length > 3 && (
-
-                                <Text style={[styles.orderItemText, { color: COLORS.textSecondary }]}>
-
-                                  +{order.items.length - 3} more items
-
-                                </Text>
-
-                              )}
-
-                            </View>
-
-                          </View>
-
-                        ))
-
-                      ) : (
-
-                        <View style={styles.emptyOrders}>
-
-                          <Icon name="cart-off" size={48} color={COLORS.textSecondary} />
-
-                          <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No orders yet</Text>
-
-                        </View>
-
-                      )}
-
-                    </>
-
-                  )}
-
-                </ScrollView>
-
-              </View>
-
-            </KeyboardAvoidingView>
-
-          </View>
-
-        </Modal>
-
-      );
-
-    
-
-  
-
-    return (
-
-      <ScreenContainer>
-
-        {/* Header */}
-
-        <View style={[styles.header, { borderBottomColor: COLORS.borderLight }]}>
-
-          <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Customers</Text>
-
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-
-            <TouchableOpacity
-
-              style={[styles.addButton, { backgroundColor: COLORS.containerGray }]}
-
-              onPress={handleExport}
-
-            >
-
-              <Icon name="download" size={20} color={COLORS.primary} />
-
-            </TouchableOpacity>
-
-            <TouchableOpacity
-
-              style={[styles.addButton, { backgroundColor: COLORS.primary }]}
-
-              onPress={openAddCustomerModal}
-
-            >
-
-              <Icon name="plus" size={20} color="#FFF" />
-
-              <Text style={styles.addButtonText}>Add</Text>
-
-            </TouchableOpacity>
-
-          </View>
-
-        </View>
-
-  
-
-        {/* Search Bar */}
-
-        <View style={[styles.searchContainer, { backgroundColor: COLORS.cardBackground }]}>
-
-          <Icon name="magnify" size={20} color={COLORS.textSecondary} />
-
-          <TextInput
-
-            style={[styles.searchInput, { color: COLORS.textPrimary }]}
-
-            placeholder="Search by name or phone..."
-
-            placeholderTextColor={COLORS.textSecondary}
-
-            value={searchQuery}
-
-            onChangeText={setSearchQuery}
-
-            onSubmitEditing={() => fetchData()}
-
-          />
-
-          {searchQuery.length > 0 && (
-
-            <TouchableOpacity onPress={() => { setSearchQuery(''); fetchData(); }}>
-
-              <Icon name="close-circle" size={20} color={COLORS.textSecondary} />
-
-            </TouchableOpacity>
-
-          )}
-
-        </View>
-
-  
-
-        {/* Stats Cards */}
-
-        {stats && (
-
-          <View style={styles.statsContainer}>
-
-            <View style={[styles.summaryCard, { backgroundColor: COLORS.cardBackground }]}>
-
-              <Icon name="account-group" size={28} color={COLORS.primary} />
-
-              <Text style={[styles.summaryValue, { color: COLORS.textPrimary }]}>{stats.totalCustomers}</Text>
-
-              <Text style={[styles.summaryLabel, { color: COLORS.textSecondary }]}>Total Customers</Text>
-
-            </View>
-
-            <View style={[styles.summaryCard, { backgroundColor: COLORS.cardBackground }]}>
-
-              <Icon name="account-plus" size={28} color={COLORS.success} />
-
-              <Text style={[styles.summaryValue, { color: COLORS.textPrimary }]}>{stats.newThisMonth}</Text>
-
-              <Text style={[styles.summaryLabel, { color: COLORS.textSecondary }]}>New This Month</Text>
-
-            </View>
-
-            <View style={[styles.summaryCard, { backgroundColor: COLORS.cardBackground }]}>
-
-              <Icon name="crown" size={28} color="#F59E0B" />
-
-              <Text style={[styles.summaryValue, { color: COLORS.textPrimary }]}>{stats.tiers.gold + stats.tiers.platinum}</Text>
-
-              <Text style={[styles.summaryLabel, { color: COLORS.textSecondary }]}>Premium</Text>
-
-            </View>
-
-          </View>
-
-        )}
-
-  
-
-        {/* Customer List */}
-
-        {loading ? (
-
-          <View style={styles.loadingContainer}>
-
-            <ActivityIndicator size="large" color={COLORS.primary} />
-
-            <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading customers...</Text>
-
-          </View>
-
-        ) : customers.length === 0 ? (
-
-          <View style={styles.emptyContainer}>
-
-            <Icon name="account-off" size={64} color={COLORS.textSecondary} />
-
-            <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>No Customers Found</Text>
-
-            <Text style={[styles.emptySubtitle, { color: COLORS.textSecondary }]}>
-
-              {searchQuery ? 'Try a different search term' : 'Customers will appear here after they make purchases'}
-
-            </Text>
-
-          </View>
-
-        ) : (
-
-          <FlatList
-
-            data={customers}
-
-            renderItem={({ item }) => <CustomerCard item={item} />}
-
-            keyExtractor={item => item.id}
-
-            contentContainerStyle={styles.listContent}
-
-            showsVerticalScrollIndicator={false}
-
-            onEndReached={loadMore}
-
-            onEndReachedThreshold={0.5}
-
-            refreshControl={
-
-              <RefreshControl
-
-                refreshing={refreshing}
-
-                onRefresh={() => fetchData(true)}
-
-                colors={[COLORS.primary]}
-
-                tintColor={COLORS.primary}
-
-              />
-
-            }
-
-          />
-
-        )}
-
-  
-
-        <CustomerDetailModal />
-
-  
-
-              {/* Add/Edit Customer Modal */}
-
-  
-
-              <Modal
-
-  
-
-                visible={editModalVisible}
-
-  
-
-                transparent
-
-  
-
-                animationType="fade"
-
-  
-
-                statusBarTranslucent
-
-  
-
-                onRequestClose={() => setEditModalVisible(false)}
-
-  
-
-              >
-
-  
-
-                <View style={styles.modalOverlay}>
-
-  
-
-                  <Pressable style={styles.backdrop} onPress={() => setEditModalVisible(false)} />
-
-  
-
-                  
-
-  
-
-                  <KeyboardAvoidingView
-
-  
-
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-
-  
-
-                    style={styles.modalKeyboardView}
-
-  
-
-                  >
-
-  
-
-                    <View style={[styles.modalContent, { backgroundColor: COLORS.cardBackground }]}>
-
-  
-
-                      {/* Modal Header */}
-
-  
-
-                      <View style={styles.editModalHeader}>
-
-  
-
-                        <Text style={[styles.editModalTitle, { color: COLORS.textPrimary }]}>
-
-  
-
-                          {editingCustomer ? 'Edit Customer' : 'Add Customer'}
-
-  
+                          {formatCurrency(order.total)}
 
                         </Text>
 
-  
-
-                        <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-
-  
-
-                          <Icon name="close" size={24} color={COLORS.textSecondary} />
-
-  
-
-                        </TouchableOpacity>
-
-  
-
                       </View>
 
-  
+                      <Text style={[styles.orderDate, { color: COLORS.textSecondary }]}>
 
-        
+                        {moment(order.createdAt).format('MMM D, YYYY h:mm A')}
 
-  
+                      </Text>
 
-                      <ScrollView 
+                      <View style={styles.orderItems}>
 
-  
+                        {order.items.slice(0, 3).map((item, idx) => (
 
-                        style={styles.scrollView} 
+                          <Text key={idx} style={[styles.orderItemText, { color: COLORS.textSecondary }]}>
 
-  
+                            {item.quantity}x {item.name}
 
-                        contentContainerStyle={styles.scrollContent}
+                          </Text>
 
-  
+                        ))}
 
-                        showsVerticalScrollIndicator={true}
+                        {order.items.length > 3 && (
 
-  
+                          <Text style={[styles.orderItemText, { color: COLORS.textSecondary }]}>
 
-                        bounces={true}
+                            +{order.items.length - 3} more items
 
-  
+                          </Text>
 
-                        keyboardShouldPersistTaps="handled"
-
-  
-
-                      >
-
-  
-
-                        {/* Form Fields */}
-
-  
-
-                        <View style={styles.formGroup}>
-
-  
-
-                          <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Name *</Text>
-
-  
-
-                          <TextInput
-
-  
-
-                            style={[
-
-  
-
-                              styles.formInput,
-
-  
-
-                              {
-
-  
-
-                                backgroundColor: COLORS.background,
-
-  
-
-                                color: COLORS.textPrimary,
-
-  
-
-                                borderColor: formErrors.name ? COLORS.error : COLORS.borderLight
-
-  
-
-                              }
-
-  
-
-                            ]}
-
-  
-
-                            value={formName}
-
-  
-
-                            onChangeText={setFormName}
-
-  
-
-                            placeholder="Enter customer name"
-
-  
-
-                            placeholderTextColor={COLORS.textSecondary}
-
-  
-
-                          />
-
-  
-
-                          {formErrors.name && (
-
-  
-
-                            <Text style={[styles.formError, { color: COLORS.error }]}>{formErrors.name}</Text>
-
-  
-
-                          )}
-
-  
-
-                        </View>
-
-  
-
-        
-
-  
-
-                        <View style={styles.formGroup}>
-
-  
-
-                          <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Phone *</Text>
-
-  
-
-                          <TextInput
-
-  
-
-                            style={[
-
-  
-
-                              styles.formInput,
-
-  
-
-                              {
-
-  
-
-                                backgroundColor: COLORS.background,
-
-  
-
-                                color: COLORS.textPrimary,
-
-  
-
-                                borderColor: formErrors.phone ? COLORS.error : COLORS.borderLight
-
-  
-
-                              }
-
-  
-
-                            ]}
-
-  
-
-                            value={formPhone}
-
-  
-
-                            onChangeText={setFormPhone}
-
-  
-
-                            placeholder="+962 7XX XXX XXX"
-
-  
-
-                            placeholderTextColor={COLORS.textSecondary}
-
-  
-
-                            keyboardType="phone-pad"
-
-  
-
-                          />
-
-  
-
-                          {formErrors.phone && (
-
-  
-
-                            <Text style={[styles.formError, { color: COLORS.error }]}>{formErrors.phone}</Text>
-
-  
-
-                          )}
-
-  
-
-                        </View>
-
-  
-
-        
-
-  
-
-                        <View style={styles.formGroup}>
-
-  
-
-                          <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Email</Text>
-
-  
-
-                          <TextInput
-
-  
-
-                            style={[
-
-  
-
-                              styles.formInput,
-
-  
-
-                              { backgroundColor: COLORS.background, color: COLORS.textPrimary, borderColor: COLORS.borderLight }
-
-  
-
-                            ]}
-
-  
-
-                            value={formEmail}
-
-  
-
-                            onChangeText={setFormEmail}
-
-  
-
-                            placeholder="customer@example.com"
-
-  
-
-                            placeholderTextColor={COLORS.textSecondary}
-
-  
-
-                            keyboardType="email-address"
-
-  
-
-                            autoCapitalize="none"
-
-  
-
-                          />
-
-  
-
-                        </View>
-
-  
-
-                      </ScrollView>
-
-  
-
-        
-
-  
-
-                      {/* Action Buttons */}
-
-  
-
-                      <View style={styles.modalActions}>
-
-  
-
-                        <TouchableOpacity
-
-  
-
-                          style={[styles.cancelBtn, { borderColor: COLORS.borderLight }]}
-
-  
-
-                          onPress={() => setEditModalVisible(false)}
-
-  
-
-                        >
-
-  
-
-                          <Text style={[styles.cancelBtnText, { color: COLORS.textSecondary }]}>Cancel</Text>
-
-  
-
-                        </TouchableOpacity>
-
-  
-
-                        <TouchableOpacity
-
-  
-
-                          style={[styles.saveBtn, { backgroundColor: COLORS.primary }]}
-
-  
-
-                          onPress={handleSaveCustomer}
-
-  
-
-                          disabled={saving}
-
-  
-
-                        >
-
-  
-
-                          {saving ? (
-
-  
-
-                            <ActivityIndicator color="#FFF" size="small" />
-
-  
-
-                          ) : (
-
-  
-
-                            <Text style={styles.saveBtnText}>
-
-  
-
-                              {editingCustomer ? 'Save' : 'Add'}
-
-  
-
-                            </Text>
-
-  
-
-                          )}
-
-  
-
-                        </TouchableOpacity>
-
-  
+                        )}
 
                       </View>
-
-  
 
                     </View>
 
-  
+                  ))
 
-                  </KeyboardAvoidingView>
+                ) : (
 
-  
+                  <View style={styles.emptyOrders}>
 
-                </View>
+                    <Icon name="cart-off" size={48} color={COLORS.textSecondary} />
 
-  
+                    <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No orders yet</Text>
 
-              </Modal>
+                  </View>
 
-  
+                )}
 
-            </ScreenContainer>
+              </>
 
-  
+            )}
 
-          );
+          </ScrollView>
 
-  
+        </View>
 
-        
+      </View>
 
-  };
+    </Modal>
 
-  
+  );
 
-  const styles = StyleSheet.create({
 
-    header: {
 
-      flexDirection: 'row',
 
-      justifyContent: 'space-between',
 
-      alignItems: 'center',
+  return (
 
-      paddingHorizontal: 20,
+    <ScreenContainer>
 
-      paddingVertical: 16,
+      {/* Header */}
 
-      borderBottomWidth: 1,
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTagline}>RELATIONSHIP MANAGEMENT</Text>
+            <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Customers</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: COLORS.containerGray }]}
+              onPress={handleExport}
+            >
+              <Icon name="download" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: COLORS.primary }]}
+              onPress={openAddCustomerModal}
+            >
+              <Icon name="plus" size={18} color="#FFF" />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-    },
+        {/* Stats Bar */}
+        {stats && (
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={[styles.headerStatValue, { color: COLORS.textPrimary }]}>{stats.totalCustomers}</Text>
+              <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Total</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.headerStatValue, { color: COLORS.success }]}>{stats.newThisMonth}</Text>
+              <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>New</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.headerStatValue, { color: '#F59E0B' }]}>
+                {stats.tiers.gold + stats.tiers.platinum}
+              </Text>
+              <Text style={[styles.headerStatLabel, { color: COLORS.textSecondary }]}>Premium</Text>
+            </View>
+          </View>
+        )}
+      </View>
 
-    headerTitle: {
 
-      fontSize: 24,
 
-      fontWeight: 'bold',
+      {/* Search Bar */}
 
-    },
+      <View style={[styles.searchContainer, { backgroundColor: COLORS.cardBackground }]}>
 
-    searchContainer: {
+        <Icon name="magnify" size={20} color={COLORS.textSecondary} />
 
-      flexDirection: 'row',
+        <TextInput
 
-      alignItems: 'center',
+          style={[styles.searchInput, { color: COLORS.textPrimary }]}
 
-      marginHorizontal: 20,
+          placeholder="Search by name or phone..."
 
-      marginVertical: 12,
+          placeholderTextColor={COLORS.textSecondary}
 
-      paddingHorizontal: 16,
+          value={searchQuery}
 
-      paddingVertical: 12,
+          onChangeText={setSearchQuery}
 
-      borderRadius: 12,
+          onSubmitEditing={() => fetchData()}
 
-      gap: 10,
+        />
 
-    },
+        {searchQuery.length > 0 && (
 
-    searchInput: {
+          <TouchableOpacity onPress={() => { setSearchQuery(''); fetchData(); }}>
 
-      flex: 1,
+            <Icon name="close-circle" size={20} color={COLORS.textSecondary} />
 
-      fontSize: 16,
+          </TouchableOpacity>
 
-    },
+        )}
 
-    statsContainer: {
+      </View>
 
-      flexDirection: 'row',
 
-      paddingHorizontal: 20,
 
-      gap: 12,
 
-      marginBottom: 16,
 
-    },
 
-    summaryCard: {
 
-      flex: 1,
+      {/* Customer List */}
 
-      padding: 16,
+      {loading ? (
 
-      borderRadius: 16,
+        <View style={styles.loadingContainer}>
 
-      alignItems: 'center',
+          <ActivityIndicator size="large" color={COLORS.primary} />
 
-    },
+          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading customers...</Text>
 
-    summaryValue: {
+        </View>
 
-      fontSize: 22,
+      ) : customers.length === 0 ? (
 
-      fontWeight: 'bold',
+        <View style={styles.emptyContainer}>
 
-      marginTop: 8,
+          <Icon name="account-off" size={64} color={COLORS.textSecondary} />
 
-    },
+          <Text style={[styles.emptyTitle, { color: COLORS.textPrimary }]}>No Customers Found</Text>
 
-    summaryLabel: {
+          <Text style={[styles.emptySubtitle, { color: COLORS.textSecondary }]}>
 
-      fontSize: 11,
+            {searchQuery ? 'Try a different search term' : 'Customers will appear here after they make purchases'}
 
-      marginTop: 4,
+          </Text>
 
-      textAlign: 'center',
+        </View>
 
-    },
+      ) : (
 
-    listContent: {
+        <FlatList
 
-      paddingHorizontal: 20,
+          data={customers}
 
-      paddingBottom: 40,
+          renderItem={({ item }) => <CustomerCard item={item} />}
 
-    },
+          keyExtractor={item => item.id}
 
-    card: {
+          contentContainerStyle={styles.listContent}
 
-      borderRadius: 16,
+          showsVerticalScrollIndicator={false}
 
-      padding: 16,
+          onEndReached={loadMore}
 
-      marginBottom: 12,
+          onEndReachedThreshold={0.5}
 
-    },
+          refreshControl={
 
-    cardHeader: {
+            <RefreshControl
 
-      flexDirection: 'row',
+              refreshing={refreshing}
 
-      alignItems: 'center',
+              onRefresh={() => fetchData(true)}
 
-    },
+              colors={[COLORS.primary]}
 
-    avatar: {
+              tintColor={COLORS.primary}
 
-      width: 48,
+            />
 
-      height: 48,
+          }
 
-      borderRadius: 24,
+        />
 
-      justifyContent: 'center',
+      )}
 
-      alignItems: 'center',
 
-      marginRight: 12,
 
-    },
+      <CustomerDetailModal />
 
-    avatarText: {
+      <CustomerFormModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        onSubmit={handleSaveCustomer}
+        initialData={editingCustomer}
+      />
 
-      fontSize: 20,
+    </ScreenContainer>
+  );
+};
 
-      fontWeight: 'bold',
 
-      color: '#FFF',
 
-    },
+const createStyles = (colors: any) => StyleSheet.create({
 
-    info: {
+  header: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 10,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerTagline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  headerTitle: { fontSize: 28, fontWeight: '800' },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+  },
+  addButtonText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  statItem: { alignItems: 'center' },
+  headerStatValue: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  headerStatLabel: { fontSize: 11, fontWeight: '600' },
+  statValue: { fontSize: 16, fontWeight: 'bold' },
+  statLabel: { fontSize: 12, marginBottom: 4 },
+  statDivider: { width: 1, height: 24, backgroundColor: colors.borderLight, },
 
-      flex: 1,
+  searchContainer: {
 
-    },
+    flexDirection: 'row',
 
-    name: {
+    alignItems: 'center',
 
-      fontSize: 16,
+    marginHorizontal: 20,
 
-      fontWeight: '600',
+    marginVertical: 12,
 
-    },
+    paddingHorizontal: 16,
 
-    phone: {
+    paddingVertical: 12,
 
-      fontSize: 13,
+    borderRadius: 12,
 
-      marginTop: 2,
+    gap: 10,
 
-    },
+  },
 
-    tierBadge: {
+  searchInput: {
 
-      paddingHorizontal: 12,
+    flex: 1,
 
-      paddingVertical: 6,
+    fontSize: 16,
 
-      borderRadius: 20,
+  },
 
-    },
 
-    tierText: {
 
-      fontSize: 12,
+  summaryCard: {
 
-      fontWeight: '600',
+    flex: 1,
 
-    },
+    padding: 16,
 
-    divider: {
+    borderRadius: 16,
 
-      height: 1,
+    alignItems: 'center',
 
-      marginVertical: 14,
+  },
 
-    },
+  summaryValue: {
 
-    stats: {
+    fontSize: 22,
 
-      flexDirection: 'row',
+    fontWeight: 'bold',
 
-      justifyContent: 'space-around',
+    marginTop: 8,
 
-    },
+  },
 
-    statItem: {
+  summaryLabel: {
 
-      alignItems: 'center',
+    fontSize: 11,
 
-    },
+    marginTop: 4,
 
-    statLabel: {
+    textAlign: 'center',
 
-      fontSize: 12,
+  },
 
-      marginBottom: 4,
+  listContent: {
 
-    },
+    paddingHorizontal: 20,
 
-    statValue: {
+    paddingBottom: 40,
 
-      fontSize: 16,
+  },
 
-      fontWeight: 'bold',
+  card: {
 
-    },
+    borderRadius: 16,
 
-    loadingContainer: {
+    padding: 16,
 
-      flex: 1,
+    marginBottom: 12,
 
-      justifyContent: 'center',
+  },
 
-      alignItems: 'center',
+  cardHeader: {
 
-    },
+    flexDirection: 'row',
 
-    loadingText: {
+    alignItems: 'center',
 
-      marginTop: 12,
+  },
 
-      fontSize: 14,
+  avatar: {
 
-    },
+    width: 48,
 
-    emptyContainer: {
+    height: 48,
 
-      flex: 1,
+    borderRadius: 24,
 
-      justifyContent: 'center',
+    justifyContent: 'center',
 
-      alignItems: 'center',
+    alignItems: 'center',
 
-      paddingHorizontal: 40,
+    marginRight: 12,
 
-    },
+  },
 
-    emptyTitle: {
+  avatarText: {
 
-      fontSize: 18,
+    fontSize: 20,
 
-      fontWeight: '600',
+    fontWeight: 'bold',
 
-      marginTop: 16,
+    color: '#FFF',
 
-    },
+  },
 
-    emptySubtitle: {
+  info: {
 
-      fontSize: 14,
+    flex: 1,
 
-      marginTop: 8,
+  },
 
-      textAlign: 'center',
+  name: {
 
-    },
+    fontSize: 16,
 
-      // Modal Styles
+    fontWeight: '600',
 
-      modalOverlay: {
+  },
 
-        flex: 1,
+  phone: {
 
-        backgroundColor: 'rgba(0,0,0,0.5)',
+    fontSize: 13,
 
-        justifyContent: 'center',
+    marginTop: 2,
 
-        alignItems: 'center',
+  },
 
-      },
+  tierBadge: {
 
-      backdrop: {
+    paddingHorizontal: 12,
 
-        ...StyleSheet.absoluteFillObject,
+    paddingVertical: 6,
 
-      },
+    borderRadius: 20,
 
-      modalKeyboardView: {
+  },
 
-        width: '90%',
+  tierText: {
 
-        maxWidth: 500,
+    fontSize: 12,
 
-        maxHeight: '85%',
+    fontWeight: '600',
 
-      },
+  },
 
-        modalContent: {
+  divider: {
 
-          width: '100%',
+    height: 1,
 
-          borderRadius: 20,
+    marginVertical: 14,
 
-          padding: 24,
+  },
 
-          maxHeight: '100%',
+  stats: {
 
-          flexShrink: 1,
+    flexDirection: 'row',
 
-          shadowColor: '#000',
+    justifyContent: 'space-around',
 
-          shadowOffset: { width: 0, height: 10 },
+  },
 
-          shadowOpacity: 0.25,
 
-          shadowRadius: 20,
 
-          elevation: 10,
+  loadingContainer: {
 
-          overflow: 'hidden',
+    flex: 1,
 
-        },
+    justifyContent: 'center',
 
-        modalHeader: {
+    alignItems: 'center',
 
-          flexDirection: 'row',
+  },
 
-          justifyContent: 'space-between',
+  loadingText: {
 
-          alignItems: 'center',
+    marginTop: 12,
 
-          marginBottom: 20,
+    fontSize: 14,
 
-        },
+  },
 
-        closeButton: {
+  emptyContainer: {
 
-          padding: 4,
+    flex: 1,
 
-        },
+    justifyContent: 'center',
 
-        modalTitle: {
+    alignItems: 'center',
 
-          fontSize: 22,
+    paddingHorizontal: 40,
 
-          fontWeight: '800',
+  },
 
-        },
+  emptyTitle: {
 
-        scrollView: {
+    fontSize: 18,
 
-          // flex: 1 removed to allow self-sizing
+    fontWeight: '600',
 
-        },
+    marginTop: 16,
 
-      
+  },
 
-      scrollContent: {
+  emptySubtitle: {
 
-        paddingBottom: 20,
+    fontSize: 14,
 
-      },
+    marginTop: 8,
 
-      customerInfo: {
+    textAlign: 'center',
 
-      alignItems: 'center',
+  },
 
-      marginBottom: 24,
+  // Modal Styles
 
-    },
+  modalOverlay: {
 
-    largeAvatar: {
+    flex: 1,
 
-      width: 80,
+    backgroundColor: 'rgba(0,0,0,0.5)',
 
-      height: 80,
+    justifyContent: 'center',
 
-      borderRadius: 40,
+    alignItems: 'center',
 
-      justifyContent: 'center',
+    padding: 20, // Add padding to prevent edge touching
 
-      alignItems: 'center',
+  },
 
-      marginBottom: 12,
+  backdrop: {
 
-    },
+    ...StyleSheet.absoluteFillObject,
 
-    largeAvatarText: {
+  },
 
-      fontSize: 32,
+  modalKeyboardView: {
 
-      fontWeight: 'bold',
+    width: '90%',
 
-      color: '#FFF',
+    maxWidth: 500,
 
-    },
+    maxHeight: '85%',
 
-    customerName: {
+  },
 
-      fontSize: 22,
+  modalContent: {
 
-      fontWeight: 'bold',
+    width: '100%',
 
-      marginBottom: 8,
+    borderRadius: 20,
 
-    },
+    padding: 24,
 
-    section: {
+    maxHeight: '100%',
 
-      borderTopWidth: 1,
+    flexShrink: 1,
 
-      borderBottomWidth: 1,
+    shadowColor: '#000',
 
-      paddingVertical: 16,
+    shadowOffset: { width: 0, height: 10 },
 
-      marginBottom: 20,
+    shadowOpacity: 0.25,
 
-    },
+    shadowRadius: 20,
 
-    infoRow: {
+    elevation: 10,
 
-      flexDirection: 'row',
+    overflow: 'hidden',
 
-      alignItems: 'center',
+  },
 
-      gap: 12,
+  modalHeader: {
 
-      paddingVertical: 8,
+    flexDirection: 'row',
 
-    },
+    justifyContent: 'space-between',
 
-    infoText: {
+    alignItems: 'center',
 
-      fontSize: 15,
+    marginBottom: 20,
 
-    },
+  },
 
-    statsGrid: {
+  closeButton: {
 
-      flexDirection: 'row',
+    padding: 4,
 
-      gap: 12,
+  },
 
-      marginBottom: 24,
+  modalTitle: {
 
-    },
+    fontSize: 22,
 
-    statCard: {
+    fontWeight: '800',
 
-      flex: 1,
+  },
 
-      padding: 16,
+  scrollView: {
 
-      borderRadius: 12,
+    // flex: 1 removed to allow self-sizing
 
-      alignItems: 'center',
+  },
 
-    },
 
-    statCardValue: {
 
-      fontSize: 18,
+  scrollContent: {
 
-      fontWeight: 'bold',
+    paddingBottom: 20,
 
-      marginTop: 8,
+  },
 
-    },
+  customerInfo: {
 
-    statCardLabel: {
+    alignItems: 'center',
 
-      fontSize: 11,
+    marginBottom: 24,
 
-      marginTop: 4,
+  },
 
-    },
+  largeAvatar: {
 
-    sectionTitle: {
+    width: 80,
 
-      fontSize: 16,
+    height: 80,
 
-      fontWeight: '700',
+    borderRadius: 40,
 
-      marginBottom: 12,
+    justifyContent: 'center',
 
-    },
+    alignItems: 'center',
 
-    orderCard: {
+    marginBottom: 12,
 
-      borderRadius: 12,
+  },
 
-      padding: 14,
+  largeAvatarText: {
 
-      marginBottom: 10,
+    fontSize: 32,
 
-    },
+    fontWeight: 'bold',
 
-    orderHeader: {
+    color: '#FFF',
 
-      flexDirection: 'row',
+  },
 
-      justifyContent: 'space-between',
+  customerName: {
 
-      alignItems: 'center',
+    fontSize: 22,
 
-    },
+    fontWeight: 'bold',
 
-    orderNumber: {
+    marginBottom: 8,
 
-      fontSize: 15,
+  },
 
-      fontWeight: '600',
+  section: {
 
-    },
+    borderTopWidth: 1,
 
-    orderTotal: {
+    borderBottomWidth: 1,
 
-      fontSize: 15,
+    paddingVertical: 16,
 
-      fontWeight: 'bold',
+    marginBottom: 20,
 
-    },
+  },
 
-    orderDate: {
+  infoRow: {
 
-      fontSize: 12,
+    flexDirection: 'row',
 
-      marginTop: 4,
+    alignItems: 'center',
 
-    },
+    gap: 12,
 
-    orderItems: {
+    paddingVertical: 8,
 
-      marginTop: 8,
+  },
 
-    },
+  infoText: {
 
-    orderItemText: {
+    fontSize: 15,
 
-      fontSize: 13,
+  },
 
-    },
+  statsGrid: {
 
-    emptyOrders: {
+    flexDirection: 'row',
 
-      alignItems: 'center',
+    gap: 12,
 
-      paddingVertical: 30,
+    marginBottom: 24,
 
-    },
+  },
 
-    emptyText: {
+  statCard: {
 
-      fontSize: 14,
+    flex: 1,
 
-      marginTop: 12,
+    padding: 16,
 
-    },
+    borderRadius: 12,
 
-    // Add button styles
+    alignItems: 'center',
 
-    addButton: {
+  },
 
-      flexDirection: 'row',
+  statCardValue: {
 
-      alignItems: 'center',
+    fontSize: 18,
 
-      gap: 6,
+    fontWeight: 'bold',
 
-      paddingHorizontal: 16,
+    marginTop: 8,
 
-      paddingVertical: 8,
+  },
 
-      borderRadius: 20,
+  statCardLabel: {
 
-    },
+    fontSize: 11,
 
-    addButtonText: {
+    marginTop: 4,
 
-      color: '#FFF',
+  },
 
-      fontSize: 14,
+  sectionTitle: {
 
-      fontWeight: '600',
+    fontSize: 16,
 
-    },
+    fontWeight: '700',
 
-    // Edit modal styles
+    marginBottom: 12,
 
-    editModalHeader: {
+  },
 
-      flexDirection: 'row',
+  orderCard: {
 
-      justifyContent: 'space-between',
+    borderRadius: 12,
 
-      alignItems: 'center',
+    padding: 14,
 
-      marginBottom: 24,
+    marginBottom: 10,
 
-    },
+  },
 
-    editModalTitle: {
+  orderHeader: {
 
-      fontSize: 22,
+    flexDirection: 'row',
 
-      fontWeight: '800',
+    justifyContent: 'space-between',
 
-    },
+    alignItems: 'center',
 
-    formGroup: {
+  },
 
-      marginBottom: 16,
+  orderNumber: {
 
-    },
+    fontSize: 15,
 
-    formLabel: {
+    fontWeight: '600',
 
-      fontSize: 14,
+  },
 
-      fontWeight: '600',
+  orderTotal: {
 
-      marginBottom: 8,
+    fontSize: 15,
 
-    },
+    fontWeight: 'bold',
 
-    formInput: {
+  },
 
-      borderWidth: 1,
+  orderDate: {
 
-      borderRadius: 10,
+    fontSize: 12,
 
-      padding: 14,
+    marginTop: 4,
 
-      fontSize: 15,
+  },
 
-    },
+  orderItems: {
 
-    formError: {
+    marginTop: 8,
 
-      fontSize: 12,
+  },
 
-      marginTop: 4,
+  orderItemText: {
 
-    },
+    fontSize: 13,
 
-    modalActions: {
+  },
 
-      flexDirection: 'row',
+  emptyOrders: {
 
-      gap: 12,
+    alignItems: 'center',
 
-      marginTop: 20,
+    paddingVertical: 30,
 
-      paddingTop: 16,
+  },
 
-      borderTopWidth: 1,
+  emptyText: {
 
-      borderTopColor: '#E2E8F0',
+    fontSize: 14,
 
-    },
+    marginTop: 12,
 
-    cancelBtn: {
+  },
 
-      flex: 1,
+  // Add button styles
 
-      padding: 14,
 
-      borderRadius: 10,
 
-      borderWidth: 1,
+  // Edit modal styles
 
-      alignItems: 'center',
+  editModalHeader: {
 
-      justifyContent: 'center',
+    flexDirection: 'row',
 
-    },
+    justifyContent: 'space-between',
 
-    cancelBtnText: {
+    alignItems: 'center',
 
-      fontSize: 15,
+    marginBottom: 24,
 
-      fontWeight: '600',
+  },
 
-    },
+  editModalTitle: {
 
-    saveBtn: {
+    fontSize: 22,
 
-      flex: 1,
+    fontWeight: '800',
 
-      padding: 14,
+  },
 
-      borderRadius: 10,
+  formGroup: {
 
-      alignItems: 'center',
+    marginBottom: 16,
 
-      justifyContent: 'center',
+  },
 
-    },
+  formLabel: {
 
-    saveBtnText: {
+    fontSize: 14,
 
-      color: '#FFF',
+    fontWeight: '600',
 
-      fontSize: 15,
+    marginBottom: 8,
 
-      fontWeight: '700',
+  },
 
-    },
+  formInput: {
 
-    saveButton: {
+    borderWidth: 1,
 
-      flexDirection: 'row',
+    borderRadius: 10,
 
-      alignItems: 'center',
+    padding: 14,
 
-      justifyContent: 'center',
+    fontSize: 15,
 
-      gap: 8,
+  },
 
-      paddingVertical: 16,
+  formError: {
 
-      borderRadius: 12,
+    fontSize: 12,
 
-      marginTop: 12,
+    marginTop: 4,
 
-    },
+  },
 
-    saveButtonText: {
+  modalActions: {
 
-      color: '#FFF',
+    flexDirection: 'row',
 
-      fontSize: 16,
+    gap: 12,
 
-      fontWeight: '600',
+    marginTop: 20,
 
-    },
+    paddingTop: 16,
 
-    editCustomerButton: {
+    borderTopWidth: 1,
 
-      flexDirection: 'row',
+    borderTopColor: '#E2E8F0',
 
-      alignItems: 'center',
+  },
 
-      gap: 6,
+  cancelBtn: {
 
-      paddingHorizontal: 16,
+    flex: 1,
 
-      paddingVertical: 8,
+    padding: 14,
 
-      borderRadius: 16,
+    borderRadius: 10,
 
-      marginTop: 12,
+    borderWidth: 1,
 
-    },
+    alignItems: 'center',
 
-    editCustomerButtonText: {
+    justifyContent: 'center',
 
-      fontSize: 14,
+  },
 
-      fontWeight: '600',
+  cancelBtnText: {
 
-    },
+    fontSize: 15,
 
-  });
+    fontWeight: '600',
 
-  export default CustomersScreen;
+  },
+
+  saveBtn: {
+
+    flex: 1,
+
+    padding: 14,
+
+    borderRadius: 10,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+  },
+
+  saveBtnText: {
+
+    color: '#FFF',
+
+    fontSize: 15,
+
+    fontWeight: '700',
+
+  },
+
+  saveButton: {
+
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    gap: 8,
+
+    paddingVertical: 16,
+
+    borderRadius: 12,
+
+    marginTop: 12,
+
+  },
+
+  saveButtonText: {
+
+    color: '#FFF',
+
+    fontSize: 16,
+
+    fontWeight: '600',
+
+  },
+
+  editCustomerButton: {
+
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 6,
+
+    paddingHorizontal: 16,
+
+    paddingVertical: 8,
+
+    borderRadius: 16,
+
+    marginTop: 12,
+
+  },
+
+  editCustomerButtonText: {
+
+    fontSize: 14,
+
+    fontWeight: '600',
+
+  },
+
+});
+
+export default CustomersScreen;

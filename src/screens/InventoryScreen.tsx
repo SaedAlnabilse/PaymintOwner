@@ -174,7 +174,7 @@ const InventoryScreen = () => {
     return category?.name || 'Uncategorized';
   }, [categories]);
 
-  // Filter and sort items
+  // Filter and sort items with priority for important items
   const filteredItems = useMemo(() => {
     let filtered = items.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -188,7 +188,7 @@ const InventoryScreen = () => {
       });
     }
 
-    // Apply sorting
+    // Apply sorting with priority for important items
     switch (sortBy) {
       case 'price':
         filtered = [...filtered].sort((a, b) => b.price - a.price);
@@ -202,7 +202,27 @@ const InventoryScreen = () => {
         break;
       case 'name':
       default:
-        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        // Sort by name but prioritize important items (out of stock and low stock first)
+        filtered = [...filtered].sort((a, b) => {
+          const getItemPriority = (item: Item) => {
+            if (!item.trackStock) return 3; // Unlimited stock items last
+            const stock = item.availableStock || 0;
+            const threshold = item.lowStockThresholdYellow || 5;
+            
+            if (stock <= 0) return 0; // Out of stock first
+            if (stock <= threshold) return 1; // Low stock second
+            return 2; // Normal stock third
+          };
+          
+          const priorityA = getItemPriority(a);
+          const priorityB = getItemPriority(b);
+          
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB; // Sort by priority first
+          }
+          
+          return a.name.localeCompare(b.name); // Then by name
+        });
         break;
     }
 
@@ -238,62 +258,81 @@ const InventoryScreen = () => {
     const stockStatus = getStockStatus(item);
     const itemType = getItemType(item);
     const categoryName = getCategoryName(item.categoryId);
+    
+    // Determine if this is an important item (out of stock or low stock)
+    const isImportant = item.trackStock && (item.availableStock || 0) <= (item.lowStockThresholdYellow || 5);
+    const isOutOfStock = item.trackStock && (item.availableStock || 0) <= 0;
 
     return (
       <TouchableOpacity
-        style={[styles.itemCard, { backgroundColor: COLORS.white }]}
+        style={[
+          styles.gridItemCard, 
+          { backgroundColor: COLORS.white },
+          isImportant && styles.gridItemCardImportant,
+          isOutOfStock && styles.gridItemCardCritical
+        ]}
         onPress={() => handleEditItem(item)}
       >
-        <View style={styles.itemMainContent}>
-          <View style={[styles.itemIconContainer, { backgroundColor: COLORS.containerGray }]}>
-            {item.imageUrl ? (
-              <Image 
-                source={{ uri: getImageUrl(item.imageUrl) }} 
-                style={styles.itemImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <Icon
-                name="package-variant"
-                size={28}
-                color={COLORS.primary}
-              />
-            )}
+        <View style={[styles.gridItemImageContainer, { backgroundColor: COLORS.containerGray }]}>
+          {item.image ? (
+            <Image 
+              source={{ uri: getImageUrl(item.image) }} 
+              style={[styles.gridItemImage, isOutOfStock && styles.gridItemImageDimmed]}
+              resizeMode="cover"
+            />
+          ) : (
+            <Icon
+              name="package-variant"
+              size={40}
+              color={isOutOfStock ? COLORS.textTertiary : COLORS.primary}
+            />
+          )}
+          
+          <View style={[styles.gridTypeBadge, {
+            backgroundColor: itemType === 'addon' ? COLORS.warningBg : 'rgba(0,0,0,0.6)'
+          }]}>
+            <Text style={[styles.gridTypeBadgeText, {
+              color: itemType === 'addon' ? COLORS.warning : '#FFF'
+            }]}>
+              {itemType === 'addon' ? 'Add-on' : 'Item'}
+            </Text>
           </View>
 
-          <View style={styles.itemInfo}>
-            <View style={styles.itemNameRow}>
-              <Text style={[styles.itemName, { color: COLORS.textPrimary }]} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={[styles.typeBadge, {
-                backgroundColor: itemType === 'addon' ? COLORS.warningBg : COLORS.badgeBg
-              }]}>
-                <Text style={[styles.typeBadgeText, {
-                  color: itemType === 'addon' ? COLORS.warning : COLORS.primary
-                }]}>
-                  {itemType === 'addon' ? 'Add-on' : 'Item'}
+          {/* Priority indicator for important items */}
+          {isImportant && (
+            <View style={[styles.gridPriorityIndicator, {
+              backgroundColor: isOutOfStock ? COLORS.error : COLORS.warning
+            }]}>
+              <Icon 
+                name={isOutOfStock ? "alert-circle" : "alert"} 
+                size={12} 
+                color="#FFF" 
+              />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.gridItemContent}>
+          <Text style={[styles.gridItemName, { color: COLORS.textPrimary }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          
+          <Text style={[styles.gridItemCategory, { color: COLORS.textSecondary }]} numberOfLines={1}>
+            {categoryName}
+          </Text>
+
+          <View style={styles.gridItemFooter}>
+            <Text style={[styles.gridItemPrice, { color: COLORS.primary }]}>
+              ${item.price.toFixed(2)}
+            </Text>
+            
+            {item.trackStock && (
+              <View style={[styles.gridStockBadge, { backgroundColor: stockStatus.bg }]}>
+                <Text style={[styles.gridStockText, { color: stockStatus.color }]}>
+                  {item.availableStock}
                 </Text>
               </View>
-            </View>
-            {/* Category Name */}
-            <View style={styles.categoryRow}>
-              <Icon name="folder-outline" size={12} color={COLORS.textTertiary} />
-              <Text style={[styles.categoryText, { color: COLORS.textSecondary }]} numberOfLines={1}>
-                {categoryName}
-              </Text>
-            </View>
-            <View style={styles.itemMetaRow}>
-              <Text style={[styles.itemPrice, { color: COLORS.primary }]}>
-                ${item.price.toFixed(2)}
-              </Text>
-              <View style={[styles.stockBadge, { backgroundColor: stockStatus.bg }]}>
-                <Icon name={stockStatus.icon} size={12} color={stockStatus.color} />
-                <Text style={[styles.stockBadgeText, { color: stockStatus.color }]}>
-                  {stockStatus.label}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -345,52 +384,35 @@ const InventoryScreen = () => {
             onPress={handleAddItem}
           >
             <Icon name="plus" size={20} color="#FFF" />
+            <Text style={styles.addButtonText}>Add Item</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Stock Summary Cards */}
-        <View style={styles.stockSummaryRow}>
-          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.successBg }]}>
-            <Icon name="check-circle" size={20} color={COLORS.primary} />
-            <Text style={[styles.stockSummaryValue, { color: COLORS.primary }]}>{stockSummary.healthy}</Text>
-            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>In Stock</Text>
-          </View>
-          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.warningBg }]}>
-            <Icon name="alert" size={20} color={COLORS.warning} />
-            <Text style={[styles.stockSummaryValue, { color: COLORS.warning }]}>{stockSummary.lowStock}</Text>
-            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>Low Stock</Text>
-          </View>
-          <View style={[styles.stockSummaryCard, { backgroundColor: COLORS.errorBg }]}>
-            <Icon name="alert-circle" size={20} color={COLORS.error} />
-            <Text style={[styles.stockSummaryValue, { color: COLORS.error }]}>{stockSummary.outOfStock}</Text>
-            <Text style={[styles.stockSummaryLabel, { color: COLORS.textSecondary }]}>Out of Stock</Text>
-          </View>
-        </View>
-
-        {/* Valuation Card */}
-        <View style={[styles.valuationCard, { backgroundColor: COLORS.surface, borderColor: COLORS.border }]}>
-          <View style={styles.valuationRow}>
-            <View>
-              <Text style={[styles.valuationLabel, { color: COLORS.textSecondary }]}>Total Retail Value</Text>
-              <Text style={[styles.valuationValue, { color: COLORS.textPrimary }]}>
-                {valuation.retail.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
-              </Text>
+        {/* Compact Stock Summary */}
+        <View style={styles.compactSummaryRow}>
+          <View style={styles.compactSummaryLeft}>
+            <View style={[styles.compactStockItem, { backgroundColor: COLORS.errorBg }]}>
+              <Icon name="alert-circle" size={16} color={COLORS.error} />
+              <Text style={[styles.compactStockValue, { color: COLORS.error }]}>{stockSummary.outOfStock}</Text>
+              <Text style={[styles.compactStockLabel, { color: COLORS.textSecondary }]}>Out</Text>
             </View>
-            <View style={styles.valuationDivider} />
-            <View>
-              <Text style={[styles.valuationLabel, { color: COLORS.textSecondary }]}>Total Cost Value</Text>
-              <Text style={[styles.valuationValue, { color: COLORS.textPrimary }]}>
-                {valuation.cost.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
-              </Text>
+            <View style={[styles.compactStockItem, { backgroundColor: COLORS.warningBg }]}>
+              <Icon name="alert" size={16} color={COLORS.warning} />
+              <Text style={[styles.compactStockValue, { color: COLORS.warning }]}>{stockSummary.lowStock}</Text>
+              <Text style={[styles.compactStockLabel, { color: COLORS.textSecondary }]}>Low</Text>
+            </View>
+            <View style={[styles.compactStockItem, { backgroundColor: COLORS.successBg }]}>
+              <Icon name="check-circle" size={16} color={COLORS.primary} />
+              <Text style={[styles.compactStockValue, { color: COLORS.primary }]}>{stockSummary.healthy}</Text>
+              <Text style={[styles.compactStockLabel, { color: COLORS.textSecondary }]}>Good</Text>
             </View>
           </View>
-          {valuation.cost > 0 && (
-            <View style={[styles.profitBadge, { backgroundColor: COLORS.successBg }]}>
-              <Text style={[styles.profitText, { color: COLORS.primary }]}>
-                Potential Profit: {valuation.potentialProfit.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
-              </Text>
-            </View>
-          )}
+          <View style={styles.compactValuation}>
+            <Text style={[styles.compactValuationValue, { color: COLORS.textPrimary }]}>
+              {valuation.retail.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
+            </Text>
+            <Text style={[styles.compactValuationLabel, { color: COLORS.textSecondary }]}>Total Value</Text>
+          </View>
         </View>
 
         <View style={styles.tabs}>
@@ -515,7 +537,7 @@ const InventoryScreen = () => {
         >
           <Text style={[styles.sortLabel, { color: COLORS.textSecondary }]}>Sort by:</Text>
           {[
-            { key: 'name' as SortOption, label: 'Name', icon: 'sort-alphabetical-ascending' },
+            { key: 'name' as SortOption, label: 'Priority', icon: 'sort-alphabetical-ascending' },
             { key: 'price' as SortOption, label: 'Price', icon: 'currency-usd' },
             { key: 'stock' as SortOption, label: 'Stock', icon: 'package-variant' },
           ].map((option) => (
@@ -565,7 +587,9 @@ const InventoryScreen = () => {
           data={filteredItems}
           renderItem={renderStockItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.gridContent}
+          numColumns={2}
+          columnWrapperStyle={styles.gridColumnWrapper}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -626,11 +650,11 @@ const InventoryScreen = () => {
 
 const createStyles = (colors: any) => StyleSheet.create({
   header: {
-    padding: 20,
-    paddingBottom: 16,
+    padding: 16, // Reduced from 20
+    paddingBottom: 12, // Reduced from 16
     marginHorizontal: 20,
-    marginTop: 10, // Reduced since SafeAreaView now handles the top spacing
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 16, // Reduced from 20
     backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
@@ -645,26 +669,46 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 12, // Reduced from 16
   },
-  stockSummaryRow: {
+  compactSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  compactSummaryLeft: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
-  },
-  stockSummaryCard: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
   },
-  stockSummaryValue: {
+  compactStockItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 60,
+  },
+  compactStockValue: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  compactStockLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  compactValuation: {
+    alignItems: 'flex-end',
+  },
+  compactValuationValue: {
     fontSize: 18,
     fontWeight: '800',
-    marginTop: 4,
+    letterSpacing: -0.3,
   },
-  stockSummaryLabel: {
-    fontSize: 10,
+  compactValuationLabel: {
+    fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -687,17 +731,24 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   addButton: {
-    width: 44,
+    paddingHorizontal: 16,
     height: 44,
     borderRadius: 12,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 8,
+    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
+  },
+  addButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   tabs: {
     flexDirection: 'row',
@@ -842,6 +893,110 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  // Grid Styles
+  gridContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  gridColumnWrapper: {
+    justifyContent: 'space-between',
+    gap: 12, // Gap between columns
+  },
+  gridItemCard: {
+    width: '48%', // Approx half with gap
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9', // Light border
+  },
+  gridItemCardImportant: {
+    borderColor: colors.warning,
+    borderWidth: 2,
+    shadowColor: colors.warning,
+    shadowOpacity: 0.15,
+  },
+  gridItemCardCritical: {
+    borderColor: colors.error,
+    borderWidth: 2,
+    shadowColor: colors.error,
+    shadowOpacity: 0.2,
+  },
+  gridItemImageContainer: {
+    height: 120,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  gridItemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridItemImageDimmed: {
+    opacity: 0.6,
+  },
+  gridTypeBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  gridTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  gridPriorityIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridItemContent: {
+    padding: 12,
+  },
+  gridItemName: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  gridItemCategory: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  gridItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gridItemPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  gridStockBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  gridStockText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  // End Grid Styles
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1032,44 +1187,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  valuationCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-    borderStyle: 'dashed',
-  },
-  valuationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  valuationDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: '#E2E8F0', // Light gray
-  },
-  valuationLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  valuationValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  profitBadge: {
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  profitText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
 });
 

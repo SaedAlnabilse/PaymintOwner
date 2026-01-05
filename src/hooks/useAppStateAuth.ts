@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logoutUser } from '../store/slices/authSlice';
 import { RootState, AppDispatch } from '../store/store';
 
-// 4 minutes in milliseconds - timeout when app is completely closed/killed
-const APP_KILL_TIMEOUT = 4 * 60 * 1000;
+// 4 minutes in milliseconds - timeout when app is completely closed/killed (disabled for now)
+// const _APP_KILL_TIMEOUT = 4 * 60 * 1000;
 const APP_BACKGROUND_TIME_KEY = '@app_background_time';
 // Flag to track if this is a cold start (app just launched)
 const IS_COLD_START_KEY = '@is_cold_start';
@@ -70,12 +69,13 @@ export const useAppStateAuth = () => {
 
           console.log(`📱 COLD START: App was killed ${Math.round(timeInBackground / 1000)}s ago`);
 
-          if (timeInBackground > APP_KILL_TIMEOUT) {
-            console.log('📱 App was killed for more than 4 minutes, logging out user');
-            dispatch(logoutUser());
-          } else {
-            console.log('📱 App was killed but within 4 minute grace period, keeping user logged in');
-          }
+          // DISABLED AUTO LOGOUT - User stays logged in forever
+          // if (timeInBackground > APP_KILL_TIMEOUT) {
+          //   console.log('📱 App was killed for more than 4 minutes, logging out user');
+          //   dispatch(logoutUser());
+          // } else {
+             console.log('📱 Auto-logout disabled. Keeping user logged in.');
+          // }
 
           // Clear the background time
           await AsyncStorage.removeItem(APP_BACKGROUND_TIME_KEY);

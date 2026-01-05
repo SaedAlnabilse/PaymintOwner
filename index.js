@@ -163,14 +163,4 @@ LogBox.ignoreLogs([
   'This method is deprecated (as well as all React Native Firebase namespaced API)', // Ignore firebase deprecation warning
 ]);
 
-// Wrap App component with error handling
-const AppWithErrorHandling = () => {
-  try {
-    return <App />;
-  } catch (error) {
-    console.error('App initialization error:', error);
-    return null;
-  }
-};
-
-AppRegistry.registerComponent(appName, () => AppWithErrorHandling);
+AppRegistry.registerComponent(appName, () => App);

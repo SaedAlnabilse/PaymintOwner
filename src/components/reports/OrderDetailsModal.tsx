@@ -6,9 +6,7 @@ import {
     Modal,
     TouchableOpacity,
     ActivityIndicator,
-    Pressable,
-    KeyboardAvoidingView,
-    Platform
+    Pressable
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -52,136 +50,136 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             <View style={styles.modalOverlay}>
                 <Pressable style={styles.backdrop} onPress={onClose} />
                 
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.keyboardAvoidingView}
-                >
-                    <View style={styles.modalContent}>
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Receipt Details</Text>
-                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                <Icon name="close" size={24} color={COLORS.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
-
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={COLORS.primary} />
-                            </View>
-                        ) : order ? (
-                            <ScrollView
-                                style={styles.scrollView}
-                                contentContainerStyle={styles.content}
-                                showsVerticalScrollIndicator={true}
-                                bounces={true}
-                                keyboardShouldPersistTaps="handled"
-                            >
-                                {/* Receipt Header Info */}
-                                <View style={styles.receiptHeader}>
-                                    <View style={styles.orderMeta}>
-                                        <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
-                                        <View style={[styles.statusBadge, { backgroundColor: order.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2' }]}>
-                                            <Text style={[styles.statusText, { color: order.status === 'COMPLETED' ? '#166534' : '#991B1B' }]}>
-                                                {order.status}
-                                            </Text>
-                                        </View>
-                                    </View>
-
-                                    <Text style={styles.dateText}>
-                                        {moment(order.createdAt).format('MMM D, YYYY h:mm A')}
-                                    </Text>
-
-                                    <View style={styles.staffRow}>
-                                        <Icon name="account-circle-outline" size={16} color={COLORS.textSecondary} />
-                                        <Text style={styles.staffText}>Taken By: {order.employeeName || 'Unknown'}</Text>
-                                    </View>
-
-                                    {/* Order Note */}
-                                    {order.note && (
-                                        <Text style={styles.orderNoteSimple}>Note: {order.note}</Text>
-                                    )}
-                                </View>
-
-                                <View style={styles.divider} />
-
-                                {/* Items List */}
-                                <View style={styles.itemsList}>
-                                    {order.items.map((item, index) => (
-                                        <View key={index} style={styles.itemRow}>
-                                            <View style={styles.itemInfo}>
-                                                <Text style={styles.itemName}>
-                                                    {item.quantity}x {item.name}
-                                                </Text>
-                                                {item.selectedAttributes?.map((attr, i) => (
-                                                    <Text key={i} style={styles.itemVariant}>
-                                                        • {attr.name ? `${attr.name}: ` : ''}{attr.value}
-                                                    </Text>
-                                                ))}
-                                                {item.note && (
-                                                    <Text style={styles.itemNote}>Note: {item.note}</Text>
-                                                )}
-                                            </View>
-                                            <Text style={styles.itemPrice}>
-                                                {((item.price || 0) * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
-                                            </Text>
-                                        </View>
-                                    ))}
-                                </View>
-
-                                <View style={styles.divider} />
-
-                                {/* Totals */}
-                                <View style={styles.totalsSection}>
-                                    <View style={styles.totalRow}>
-                                        <Text style={styles.totalLabel}>Subtotal</Text>
-                                        <Text style={styles.totalValue}>
-                                            {(order.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
-                                        </Text>
-                                    </View>
-
-                                    {(order.discountAmount || 0) > 0 && (
-                                        <View style={styles.totalRow}>
-                                            <Text style={[styles.totalLabel, { color: COLORS.error || '#D55263' }]}>
-                                                Discount {discountPercentage > 0 ? `(${discountPercentage}%)` : ''}
-                                            </Text>
-                                            <Text style={[styles.totalValue, { color: COLORS.error || '#D55263' }]}>
-                                                -{(order.discountAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
-                                            </Text>
-                                        </View>
-                                    )}
-
-                                    {(order.tax > 0) && (
-                                        <View style={styles.totalRow}>
-                                            <Text style={styles.totalLabel}>Tax</Text>
-                                            <Text style={styles.totalValue}>
-                                                {order.tax.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
-                                            </Text>
-                                        </View>
-                                    )}
-
-                                    <View style={[styles.totalRow, styles.grandTotalRow]}>
-                                        <Text style={styles.grandTotalLabel}>Total</Text>
-                                        <Text style={styles.grandTotalValue}>
-                                            {order.total.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {/* Payment Info */}
-                                <View style={styles.paymentInfo}>
-                                    <View style={styles.paymentRow}>
-                                        <Icon name={order.paymentMethod === 'CASH' ? 'cash' : 'credit-card'} size={20} color={COLORS.textSecondary} />
-                                        <Text style={styles.paymentMethod}>Paid with {order.paymentMethod}</Text>
-                                    </View>
-                                </View>
-                            </ScrollView>
-                        ) : (
-                            <View style={styles.errorContainer}>
-                                <Text style={styles.errorText}>Failed To Load Order Details</Text>
-                            </View>
-                        )}
+                <View style={styles.modalContent}>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Receipt Details</Text>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                            <Icon name="close" size={24} color={COLORS.textPrimary} />
+                        </TouchableOpacity>
                     </View>
-                </KeyboardAvoidingView>
+
+                    {isLoading ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
+                        </View>
+                    ) : order ? (
+                        <ScrollView
+                            style={styles.scrollView}
+                            contentContainerStyle={styles.content}
+                            showsVerticalScrollIndicator={true}
+                            bounces={true}
+                        >
+                            {/* Receipt Header Info */}
+                            <View style={styles.receiptHeader}>
+                                <View style={styles.orderMeta}>
+                                    <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+                                    <View style={[
+                                        styles.statusBadge,
+                                        order.status === 'COMPLETED' ? styles.statusBadgeCompleted : styles.statusBadgeCancelled
+                                    ]}>
+                                        <Text style={[
+                                            styles.statusText,
+                                            order.status === 'COMPLETED' ? styles.statusTextCompleted : styles.statusTextCancelled
+                                        ]}>
+                                            {order.status}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.dateText}>
+                                    {moment(order.createdAt).format('MMM D, YYYY h:mm A')}
+                                </Text>
+
+                                <View style={styles.staffRow}>
+                                    <Icon name="account-circle-outline" size={16} color={COLORS.textSecondary} />
+                                    <Text style={styles.staffText}>Taken By: {order.employeeName || 'Unknown'}</Text>
+                                </View>
+
+                                {/* Order Note */}
+                                {order.note && (
+                                    <Text style={styles.orderNoteSimple}>Note: {order.note}</Text>
+                                )}
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            {/* Items List */}
+                            <View style={styles.itemsList}>
+                                {order.items.map((item, index) => (
+                                    <View key={index} style={styles.itemRow}>
+                                        <View style={styles.itemInfo}>
+                                            <Text style={styles.itemName}>
+                                                {item.quantity}x {item.name}
+                                            </Text>
+                                            {item.selectedAttributes?.map((attr, i) => (
+                                                <Text key={i} style={styles.itemVariant}>
+                                                    • {attr.name ? `${attr.name}: ` : ''}{attr.value}
+                                                </Text>
+                                            ))}
+                                            {item.note && (
+                                                <Text style={styles.itemNote}>Note: {item.note}</Text>
+                                            )}
+                                        </View>
+                                        <Text style={styles.itemPrice}>
+                                            {((item.price || 0) * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            {/* Totals */}
+                            <View style={styles.totalsSection}>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>Subtotal</Text>
+                                    <Text style={styles.totalValue}>
+                                        {(order.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                                    </Text>
+                                </View>
+
+                                {(order.discountAmount || 0) > 0 && (
+                                    <View style={styles.totalRow}>
+                                        <Text style={[styles.totalLabel, { color: COLORS.error || '#D55263' }]}>
+                                            Discount {discountPercentage > 0 ? `(${discountPercentage}%)` : ''}
+                                        </Text>
+                                        <Text style={[styles.totalValue, { color: COLORS.error || '#D55263' }]}>
+                                            -{(order.discountAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {(order.tax > 0) && (
+                                    <View style={styles.totalRow}>
+                                        <Text style={styles.totalLabel}>Tax</Text>
+                                        <Text style={styles.totalValue}>
+                                            {order.tax.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                                        </Text>
+                                    </View>
+                                )}
+
+                                <View style={[styles.totalRow, styles.grandTotalRow]}>
+                                    <Text style={styles.grandTotalLabel}>Total</Text>
+                                    <Text style={styles.grandTotalValue}>
+                                        {order.total.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Payment Info */}
+                            <View style={styles.paymentInfo}>
+                                <View style={styles.paymentRow}>
+                                    <Icon name={order.paymentMethod === 'CASH' ? 'cash' : 'credit-card'} size={20} color={COLORS.textSecondary} />
+                                    <Text style={styles.paymentMethod}>Paid with {order.paymentMethod}</Text>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    ) : (
+                        <View style={styles.errorContainer}>
+                            <Text style={styles.errorText}>Failed To Load Order Details</Text>
+                        </View>
+                    )}
+                </View>
             </View>
         </Modal>
     );
@@ -193,18 +191,15 @@ const createStyles = (colors: any) => StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 20, // Add padding
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
     },
-    keyboardAvoidingView: {
-        width: '90%',
-        maxWidth: 420,
-        maxHeight: '85%',
-    },
     modalContent: {
         width: '100%',
-        maxHeight: '100%',
+        maxWidth: 450,
+        maxHeight: '85%',
         backgroundColor: colors.surface,
         borderRadius: 20,
         overflow: 'hidden',
@@ -213,6 +208,7 @@ const createStyles = (colors: any) => StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 20,
         elevation: 10,
+        flex: 1, // Allow flex growth
     },
     header: {
         flexDirection: 'row',
@@ -261,10 +257,22 @@ const createStyles = (colors: any) => StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 6
     },
+    statusBadgeCompleted: {
+        backgroundColor: '#DCFCE7',
+    },
+    statusBadgeCancelled: {
+        backgroundColor: '#FEE2E2',
+    },
     statusText: {
         fontSize: 12,
         fontWeight: '600',
         textTransform: 'uppercase'
+    },
+    statusTextCompleted: {
+        color: '#166534',
+    },
+    statusTextCancelled: {
+        color: '#991B1B',
     },
     dateText: {
         fontSize: 14,

@@ -50,8 +50,9 @@ const CategoriesScreen = () => {
     setShowModal(true);
   };
 
-  const handleSubmit = async (data: CreateCategoryDto | UpdateCategoryDto) => {
+  const handleSubmit = async (name: string, icon: string, color: string) => {
     try {
+      const data = { name, icon, color };
       if (selectedCategory) {
         await categoriesService.update(selectedCategory.id, data as UpdateCategoryDto);
       } else {
@@ -73,17 +74,17 @@ const CategoriesScreen = () => {
   };
 
   const renderItem = ({ item }: { item: Category }) => (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       onPress={() => handleEdit(item)}
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
         <View style={styles.iconContainer}>
-          <Icon 
-            name={item.icon || 'folder-outline'} 
-            size={24} 
-            color={COLORS.primary} 
+          <Icon
+            name={item.icon || 'folder-outline'}
+            size={24}
+            color={COLORS.primary}
           />
         </View>
         <View style={styles.info}>

@@ -62,7 +62,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onCancel, onConfirm 
                 }),
             ]).start();
         }
-    }, [visible]);
+    }, [visible, fadeAnim, scaleAnim, slideAnim]);
 
     return (
         <Modal

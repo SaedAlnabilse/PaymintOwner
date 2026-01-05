@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // jest.setup.js
 import 'react-native-gesture-handler/jestSetup';
 
@@ -16,7 +17,7 @@ jest.mock('react-native-vector-icons/MaterialIcons', () => 'Icon');
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  // const { View } = require('react-native'); // Removed unused View
 
   const actual = jest.requireActual('react-native-safe-area-context');
 

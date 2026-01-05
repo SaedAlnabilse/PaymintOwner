@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import moment from 'moment-timezone';
 import { getColors } from '../../constants/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { shiftService, Shift } from '../../services/shiftService';
+import ShiftInfoModal from './ShiftInfoModal';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface BackOfficeHeaderProps {
     storeName?: string;
@@ -22,15 +25,15 @@ interface BackOfficeHeaderProps {
 
 const BackOfficeHeader: React.FC<BackOfficeHeaderProps> = ({
     storeName = 'Paymint Store',
-    userName = 'Owner',
-    userRole = 'Admin',
-    storeStatus = 'CLOSED',
+    userName: _userName = 'Owner',
+    userRole: _userRole = 'Admin',
+    storeStatus: _storeStatus = 'CLOSED',
     unreadNotifications = 0,
     onRefresh,
     onMenuPress,
     onNotificationsPress,
-    onProfilePress,
-    onStorePress,
+    onProfilePress: _onProfilePress,
+    onStorePress: _onStorePress,
     showClock = true,
 }) => {
     const { isDarkMode } = useTheme();
@@ -39,6 +42,36 @@ const BackOfficeHeader: React.FC<BackOfficeHeaderProps> = ({
     const styles = createStyles(COLORS);
 
     const [currentTime, setCurrentTime] = useState(moment().tz('Asia/Amman'));
+    const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+    const [lastShift, setLastShift] = useState<Shift | null>(null);
+    const [shiftModalVisible, setShiftModalVisible] = useState(false);
+    const [shiftLoading, setShiftLoading] = useState(false);
+
+    const fetchShiftStatus = useCallback(async () => {
+        setShiftLoading(true);
+        try {
+            // 1. Check for ANY active shift in the store
+            const activeShift = await shiftService.getStoreActiveShift();
+            setCurrentShift(activeShift);
+
+            // 2. If NO active shift, fetch the last closed shift for the store
+            if (!activeShift) {
+                const closedShift = await shiftService.getLatestClosedShift();
+                setLastShift(closedShift);
+            }
+        } catch (error) {
+            console.error('Failed to fetch store shift status', error);
+        } finally {
+            setShiftLoading(false);
+        }
+    }, []);
+
+    // Fetch shift status on mount and when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchShiftStatus();
+        }, [fetchShiftStatus])
+    );
 
     useEffect(() => {
         if (!showClock) return;
@@ -50,93 +83,106 @@ const BackOfficeHeader: React.FC<BackOfficeHeaderProps> = ({
         return () => clearInterval(timer);
     }, [showClock]);
 
+    const handleShiftPress = () => {
+        setShiftModalVisible(true);
+    };
+
     const formattedDate = currentTime.format('ddd, MMM D, YYYY');
     const formattedTime = currentTime.format('h:mm:ss A');
 
-    const isOpen = storeStatus === 'OPEN';
-    const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    const isOpen = !!currentShift;
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Left Section - Branding and Menu */}
-            <View style={styles.leftSection}>
-                {/* Menu Button */}
-                <TouchableOpacity
-                    style={styles.menuButton}
-                    onPress={onMenuPress}
-                    activeOpacity={0.7}
-                >
-                    <Icon name="menu" size={28} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-
-                {/* Logo/Brand */}
-                <View style={[styles.logoContainer, { backgroundColor: COLORS.primary }]}>
-                    <Icon name="store" size={22} color="#FFFFFF" />
-                </View>
-                <View style={styles.brandInfo}>
-                    <Text style={styles.brandName} numberOfLines={1}>{storeName}</Text>
-                    <Text style={styles.brandTagline}>Back Office</Text>
-                </View>
-            </View>
-
-            {/* Right Section - Status, Clock, Actions */}
-            <View style={styles.rightSection}>
-                {/* Store Status */}
-                <View style={[
-                    styles.statusBadge,
-                    { backgroundColor: isOpen ? COLORS.successBg : COLORS.errorBg }
-                ]}>
-                    <View style={[
-                        styles.statusDot,
-                        { backgroundColor: isOpen ? COLORS.primary : COLORS.error }
-                    ]} />
-                    <Text style={[
-                        styles.statusText,
-                        { color: isOpen ? COLORS.primary : COLORS.error }
-                    ]}>
-                        {isOpen ? 'Open' : 'Closed'}
-                    </Text>
-                </View>
-
-                {/* Clock */}
-                {showClock && (
-                    <View style={styles.clockContainer}>
-                        <Text style={styles.dateText}>{formattedDate}</Text>
-                        <Text style={[styles.timeText, { color: COLORS.primary }]}>{formattedTime}</Text>
-                    </View>
-                )}
-
-                {/* Divider */}
-                <View style={[styles.divider, { backgroundColor: COLORS.border }]} />
-
-                {/* Refresh */}
-                {onRefresh && (
+        <>
+            <View style={[styles.container, { paddingTop: insets.top }]}>
+                {/* Left Section - Branding and Menu */}
+                <View style={styles.leftSection}>
                     <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: COLORS.badgeBg }]}
-                        onPress={onRefresh}
+                        style={styles.menuButton}
+                        onPress={onMenuPress}
                         activeOpacity={0.7}
                     >
-                        <Icon name="refresh" size={20} color={COLORS.primary} />
+                        <Icon name="menu" size={26} color={COLORS.textPrimary} />
                     </TouchableOpacity>
-                )}
 
-                {/* Notifications */}
-                <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={onNotificationsPress}
-                    activeOpacity={0.7}
-                >
-                    <Icon name="bell-outline" size={22} color={COLORS.textSecondary} />
-                    {unreadNotifications > 0 && (
-                        <View style={[styles.notificationBadge, { backgroundColor: COLORS.error }]}>
-                            <Text style={styles.notificationBadgeText}>
-                                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                            </Text>
+                    <View style={styles.brandingContainer}>
+                        <View style={[styles.logoContainer, { backgroundColor: COLORS.primary }]}>
+                            <Icon name="store" size={20} color="#FFFFFF" />
                         </View>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View >
+                        <Text style={styles.brandName} numberOfLines={1}>{storeName}</Text>
+                    </View>
+                </View>
+
+                {/* Right Section - Status, Clock, Actions */}
+                <View style={styles.rightSection}>
+                    {/* Store Status Pill */}
+                    <TouchableOpacity
+                        style={[
+                            styles.statusBadge,
+                            {
+                                backgroundColor: isDarkMode ? (isOpen ? COLORS.successBg + '20' : COLORS.errorBg + '20') : (isOpen ? COLORS.successBg : COLORS.errorBg),
+                                borderColor: isOpen ? COLORS.primary + '20' : COLORS.error + '20',
+                                borderWidth: 1,
+                            }
+                        ]}
+                        onPress={handleShiftPress}
+                        activeOpacity={0.7}
+                    >
+                        {shiftLoading ? (
+                            <ActivityIndicator size="small" color={isOpen ? COLORS.primary : COLORS.error} style={styles.loader} />
+                        ) : (
+                            <View style={[
+                                styles.statusDot,
+                                { backgroundColor: isOpen ? COLORS.primary : COLORS.error }
+                            ]} />
+                        )}
+                        <Text style={[
+                            styles.statusText,
+                            { color: isOpen ? COLORS.primary : COLORS.error }
+                        ]}>
+                            {isOpen ? 'Open' : 'Closed'}
+                        </Text>
+                        <Icon
+                            name="chevron-down"
+                            size={14}
+                            color={isOpen ? COLORS.primary : COLORS.error}
+                            style={{ opacity: 0.6 }}
+                        />
+                    </TouchableOpacity>
+
+                    {/* Quick Activity Button Container */}
+                    <View style={styles.quickActions}>
+                        {onRefresh && (
+                            <TouchableOpacity
+                                style={styles.actionCircle}
+                                onPress={onRefresh}
+                                activeOpacity={0.6}
+                            >
+                                <Icon name="refresh" size={20} color={COLORS.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                            style={styles.actionCircle}
+                            onPress={onNotificationsPress}
+                            activeOpacity={0.6}
+                        >
+                            <Icon name="bell-outline" size={21} color={COLORS.textSecondary} />
+                            {unreadNotifications > 0 && (
+                                <View style={[styles.activeDot, { backgroundColor: COLORS.error }]} />
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View >
+
+            <ShiftInfoModal
+                visible={shiftModalVisible}
+                status={isOpen ? 'OPEN' : 'CLOSED'}
+                onClose={() => setShiftModalVisible(false)}
+                shift={isOpen ? currentShift : lastShift}
+            />
+        </>
     );
 };
 
@@ -161,51 +207,53 @@ const createStyles = (colors: any) => StyleSheet.create({
     leftSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
     },
     menuButton: {
-        padding: 4,
-        marginRight: -4,
+        padding: 8,
+        marginLeft: -8,
+        marginRight: 4,
+    },
+    brandingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
     },
     logoContainer: {
-        width: 38,
-        height: 38,
-        borderRadius: 9,
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    brandInfo: {
-        justifyContent: 'center',
-        gap: 0, // Ensure no extra gap
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
     },
     brandName: {
-        fontSize: 17,
+        fontSize: 18,
         fontWeight: '800',
         color: colors.textPrimary,
         letterSpacing: -0.5,
-        lineHeight: 22,
     },
-    brandTagline: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 1, // Increased spacing for better readability
-        lineHeight: 12,
-        marginTop: -1, // Pull it up slightly
-    },
+
     rightSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
+        gap: 10,
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 8,
+        borderRadius: 100,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     statusDot: {
         width: 6,
@@ -214,55 +262,34 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
     statusText: {
         fontSize: 11,
-        fontWeight: '700',
+        fontWeight: '800',
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
     },
-    clockContainer: {
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+    quickActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
     },
-    dateText: {
-        fontSize: 10,
-        fontWeight: '500',
-        color: colors.textTertiary,
-        lineHeight: 14,
-    },
-    timeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        fontVariant: ['tabular-nums'],
-        lineHeight: 16,
-    },
-    divider: {
-        width: 1,
-        height: 24,
-        marginHorizontal: 4,
-    },
-    iconButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+    actionCircle: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    notificationBadge: {
+    activeDot: {
         position: 'absolute',
-        top: 6,
-        right: 6,
-        minWidth: 14,
-        height: 14,
-        borderRadius: 7,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 3,
+        top: 10,
+        right: 10,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
         borderWidth: 1.5,
         borderColor: colors.surface,
     },
-    notificationBadgeText: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#FFFFFF',
+    loader: {
+        marginRight: 4,
     },
 });
 

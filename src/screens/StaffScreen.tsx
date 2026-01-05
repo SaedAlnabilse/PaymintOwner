@@ -6,6 +6,8 @@ import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { getStaffOverview, StaffMember as StaffMemberType } from '../services/dashboard';
 import { createUser, updateUser, deleteUser, CreateUserDto, UpdateUserDto } from '../services/users';
+import { salesSettingsService } from '../services/salesSettings';
+import { Discount } from '../types/salesManagement';
 import EmployeeFormModal from '../components/staff/EmployeeFormModal';
 import ShiftHistoryModal from '../components/staff/ShiftHistoryModal';
 
@@ -14,6 +16,121 @@ interface StaffMember extends StaffMemberType {
   // Additional fields if needed
   email?: string;
 }
+
+interface StaffCardProps {
+  staff: StaffMember;
+  onEdit: (staff: StaffMember) => void;
+  onViewHistory: (staff: { id: string; name: string }) => void;
+  styles: any;
+  colors: any;
+}
+
+const getRoleColor = (role: string, colors: any) => {
+  switch (role?.toLowerCase()) {
+    case 'manager': return colors.graphGray;
+    case 'barista': return colors.warning;
+    case 'server': return colors.neutralGray;
+    case 'owner':
+    case 'admin': return colors.primary;
+    case 'user': return colors.success;
+    case 'cashier': return colors.neutralGray;
+    default: return colors.textSecondary;
+  }
+};
+
+const StaffCard: React.FC<StaffCardProps> = ({
+  staff,
+  onEdit,
+  onViewHistory,
+  styles,
+  colors
+}) => {
+  const isClockedIn = staff.status === 'Clocked In';
+  const roleColor = getRoleColor(staff.role, colors);
+
+  return (
+    <TouchableOpacity
+      style={[styles.staffCard, { backgroundColor: colors.white }]}
+      onPress={() => onEdit(staff)}
+    >
+      <View style={styles.cardMain}>
+        <View style={styles.staffLeft}>
+          <View style={[styles.avatar, { backgroundColor: colors.containerGray }]}>
+            <Text style={[styles.avatarText, { color: roleColor }]}>{staff.initials}</Text>
+          </View>
+
+          <View style={styles.staffInfo}>
+            <Text style={[styles.userName, { color: colors.textPrimary }]}>{staff.name}</Text>
+            <View style={styles.roleRow}>
+              <View style={[styles.roleBadge, { backgroundColor: colors.containerGray }]}>
+                <Icon name="account-tie" size={12} color={roleColor} />
+                <Text style={[styles.roleText, { color: roleColor }]}>{staff.role}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={[styles.statusPill, { backgroundColor: isClockedIn ? colors.successBg : colors.errorBg }]}>
+          <View style={[styles.statusDot, { backgroundColor: isClockedIn ? colors.primary : colors.error }]} />
+          <Text style={[styles.statusText, { color: isClockedIn ? colors.primary : colors.error }]}>
+            {isClockedIn ? 'Active' : 'Offline'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.cardStats}>
+        <View style={styles.statItem}>
+          <View style={[styles.statIconContainer, { backgroundColor: colors.containerGray }]}>
+            <Icon name="cash-multiple" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sales</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+              {staff.todaySales.toFixed(0)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statItem}>
+          <View style={[styles.statIconContainer, { backgroundColor: colors.containerGray }]}>
+            <Icon name="receipt" size={18} color={colors.orange} />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Orders</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+              {staff.todayOrderCount}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statItem}>
+          <View style={[styles.statIconContainer, { backgroundColor: colors.containerGray }]}>
+            <Icon name="clock-outline" size={18} color={colors.neutralGray} />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Hours</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+              {staff.todayHours.toFixed(1)}h
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* History Button */}
+      <TouchableOpacity
+        style={[styles.historyButton, { borderTopColor: colors.borderLight }]}
+        onPress={() => onViewHistory({ id: staff.id, name: staff.name })}
+      >
+        <Text style={[styles.historyButtonText, { color: colors.primary }]}>View Shift History</Text>
+        <Icon name="chevron-right" size={16} color={colors.primary} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+};
 
 const StaffScreen = () => {
   const { isDarkMode } = useTheme();
@@ -24,6 +141,7 @@ const StaffScreen = () => {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);
   const [stats, setStats] = useState({
     totalStaff: 0,
     clockedIn: 0,
@@ -34,26 +152,28 @@ const StaffScreen = () => {
   // Modal State
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  
+
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryStaff, setSelectedHistoryStaff] = useState<{id: string, name: string} | null>(null);
-
-  const getRoleColor = (role: string) => {
-    switch (role?.toLowerCase()) {
-      case 'manager': return COLORS.graphGray;
-      case 'barista': return COLORS.warning;
-      case 'server': return COLORS.neutralGray;
-      case 'owner':
-      case 'admin': return COLORS.primary;
-      case 'cashier': return COLORS.neutralGray;
-      default: return COLORS.textSecondary;
-    }
-  };
 
   const fetchStaffData = useCallback(async () => {
     try {
       // OPTIMIZED: Single API call to get all staff data
-      const data = await getStaffOverview();
+      // Also fetch available discounts for the modal (wrapped in try-catch to not break staff list)
+      let data;
+      let discounts = [];
+      
+      try {
+        const [staffOverview, discountsData] = await Promise.all([
+          getStaffOverview(),
+          salesSettingsService.getDiscounts().catch(() => [])
+        ]);
+        data = staffOverview;
+        discounts = discountsData;
+      } catch (err) {
+        console.error('Core staff data fetch failed:', err);
+        throw err;
+      }
 
       // Map the response to our StaffMember interface
       const fetchedStaff: StaffMember[] = data.staff.map(user => ({
@@ -64,6 +184,7 @@ const StaffScreen = () => {
       }));
 
       setStaffList(fetchedStaff);
+      setAvailableDiscounts(discounts || []);
       setStats({
         totalStaff: data.summary.totalStaff,
         clockedIn: data.summary.clockedIn,
@@ -136,96 +257,6 @@ const StaffScreen = () => {
     staff.role?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const StaffCard = ({ staff }: { staff: StaffMember }) => {
-    const isClockedIn = staff.status === 'Clocked In';
-    const roleColor = getRoleColor(staff.role);
-
-    return (
-      <TouchableOpacity
-        style={[styles.staffCard, { backgroundColor: COLORS.white }]}
-        onPress={() => handleEditStaff(staff)}
-      >
-        <View style={styles.cardMain}>
-          <View style={styles.staffLeft}>
-            <View style={[styles.avatar, { backgroundColor: COLORS.containerGray }]}>
-              <Text style={[styles.avatarText, { color: roleColor }]}>{staff.initials}</Text>
-            </View>
-
-            <View style={styles.staffInfo}>
-              <Text style={[styles.userName, { color: COLORS.textPrimary }]}>{staff.name}</Text>
-              <View style={styles.roleRow}>
-                <View style={[styles.roleBadge, { backgroundColor: COLORS.containerGray }]}>
-                  <Icon name="account-tie" size={12} color={roleColor} />
-                  <Text style={[styles.roleText, { color: roleColor }]}>{staff.role}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <View style={[styles.statusPill, { backgroundColor: isClockedIn ? COLORS.successBg : COLORS.errorBg }]}>
-            <View style={[styles.statusDot, { backgroundColor: isClockedIn ? COLORS.primary : COLORS.error }]} />
-            <Text style={[styles.statusText, { color: isClockedIn ? COLORS.primary : COLORS.error }]}>
-              {isClockedIn ? 'Active' : 'Offline'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.cardStats}>
-          <View style={styles.statItem}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.containerGray }]}>
-              <Icon name="cash-multiple" size={18} color={COLORS.primary} />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Sales</Text>
-              <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
-                {staff.todaySales.toFixed(0)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.containerGray }]}>
-              <Icon name="receipt" size={18} color={COLORS.orange} />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Orders</Text>
-              <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
-                {staff.todayOrderCount}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.containerGray }]}>
-              <Icon name="clock-outline" size={18} color={COLORS.neutralGray} />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>Hours</Text>
-              <Text style={[styles.statValue, { color: COLORS.textPrimary }]}>
-                {staff.todayHours.toFixed(1)}h
-              </Text>
-            </View>
-          </View>
-        </View>
-        
-        {/* History Button */}
-        <TouchableOpacity 
-          style={[styles.historyButton, { borderTopColor: COLORS.borderLight }]}
-          onPress={() => {
-            setSelectedHistoryStaff({ id: staff.id, name: staff.name });
-            setShowHistoryModal(true);
-          }}
-        >
-          <Text style={[styles.historyButtonText, { color: COLORS.primary }]}>View Shift History</Text>
-          <Icon name="chevron-right" size={16} color={COLORS.primary} />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <ScreenContainer style={{ backgroundColor: COLORS.background }}>
@@ -343,7 +374,17 @@ const StaffScreen = () => {
           </View>
 
           {filteredStaff.filter(s => s.status === 'Clocked In').map(staff => (
-            <StaffCard key={staff.id} staff={staff} />
+            <StaffCard
+              key={staff.id}
+              staff={staff}
+              onEdit={handleEditStaff}
+              onViewHistory={(s) => {
+                setSelectedHistoryStaff(s);
+                setShowHistoryModal(true);
+              }}
+              styles={styles}
+              colors={COLORS}
+            />
           ))}
 
           {filteredStaff.filter(s => s.status === 'Clocked In').length === 0 && (
@@ -363,7 +404,17 @@ const StaffScreen = () => {
           </View>
 
           {filteredStaff.filter(s => s.status !== 'Clocked In').map(staff => (
-            <StaffCard key={staff.id} staff={staff} />
+            <StaffCard
+              key={staff.id}
+              staff={staff}
+              onEdit={handleEditStaff}
+              onViewHistory={(s) => {
+                setSelectedHistoryStaff(s);
+                setShowHistoryModal(true);
+              }}
+              styles={styles}
+              colors={COLORS}
+            />
           ))}
 
           {filteredStaff.filter(s => s.status !== 'Clocked In').length === 0 && (
@@ -379,6 +430,7 @@ const StaffScreen = () => {
         onSubmit={handleSaveStaff}
         onDelete={handleDeleteStaff}
         initialData={selectedStaff as any}
+        availableDiscounts={availableDiscounts}
       />
 
       <ShiftHistoryModal

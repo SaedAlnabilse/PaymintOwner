@@ -5,14 +5,14 @@ export interface Item {
   name: string;
   description?: string;
   price: number;
-  costPrice?: number; // Added field
+  costPrice?: number;
   categoryId: string;
   isAvailable: boolean;
   trackStock: boolean;
   availableStock?: number;
   lowStockThresholdYellow?: number;
   lowStockThresholdRed?: number;
-  imageUrl?: string;
+  image?: string | null; // Renamed from imageUrl to image
   type?: 'ITEM' | 'ADDON' | 'item' | 'addon';
   createdAt?: string;
   updatedAt?: string;
@@ -22,24 +22,27 @@ export interface CreateItemDto {
   name: string;
   description?: string;
   price: number;
-  costPrice?: number; // Added field
+  costPrice?: number;
   categoryId: string;
   isAvailable?: boolean;
   trackStock?: boolean;
   availableStock?: number;
   type?: 'item' | 'addon';
+  image?: any; // Added for FormData
 }
 
 export interface UpdateItemDto {
   name?: string;
   description?: string;
   price?: number;
-  costPrice?: number; // Added field
+  costPrice?: number;
   categoryId?: string;
   isAvailable?: boolean;
   trackStock?: boolean;
   availableStock?: number;
   type?: 'item' | 'addon';
+  image?: any; // Added for FormData
+  removeImage?: boolean;
 }
 
 class ItemsService {
@@ -63,9 +66,14 @@ class ItemsService {
     }
   }
 
-  async create(itemData: CreateItemDto): Promise<Item> {
+  async create(itemData: CreateItemDto | FormData): Promise<Item> {
     try {
-      const response = await apiClient.post('/api/items', itemData);
+      const isFormData = itemData instanceof FormData;
+      const response = await apiClient.post('/api/items', itemData, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
+        },
+      });
       return response.data;
     } catch (error: any) {
       console.error('Failed to create item:', error.response?.data || error.message);
@@ -73,9 +81,14 @@ class ItemsService {
     }
   }
 
-  async update(itemId: string, updates: UpdateItemDto): Promise<Item> {
+  async update(itemId: string, updates: UpdateItemDto | FormData): Promise<Item> {
     try {
-      const response = await apiClient.patch(`/api/items/${itemId}`, updates);
+      const isFormData = updates instanceof FormData;
+      const response = await apiClient.patch(`/api/items/${itemId}`, updates, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
+        },
+      });
       return response.data;
     } catch (error: any) {
       console.error('Failed to update item:', error.response?.data || error.message);

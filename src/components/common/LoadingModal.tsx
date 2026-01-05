@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Modal, ActivityIndicator, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Modal, ActivityIndicator, Text, StyleSheet, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 interface LoadingModalProps {
@@ -31,7 +31,7 @@ const LoadingModal: React.FC<LoadingModalProps> = ({ visible, text = 'Loading...
       scaleAnim.setValue(0);
       opacityAnim.setValue(0);
     }
-  }, [success]);
+  }, [success, scaleAnim, opacityAnim]);
 
   return (
     <Modal

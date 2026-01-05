@@ -24,15 +24,24 @@ export const setApiUrl = (url: string) => {
 
 /**
  * Helper to generate full image URLs.
- * Handles relative paths from the backend.
+ * Handles relative paths from the backend and fixes common extension errors.
  */
 export const getImageUrl = (path: string | null | undefined): string | undefined => {
   if (!path) return undefined;
   if (path.startsWith('http')) return path;
   
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  // Remove 'public' if it's part of the path (common issue in some backends)
-  const finalPath = cleanPath.replace('/public', '');
+  // Fix common double extension issues from older uploads
+  const cleanPath = path
+    .replace('/public', '')
+    .replace('.jjpg', '.jpg')
+    .replace('.ppng', '.png')
+    .replace('.jjpeg', '.jpeg')
+    .replace('.gggif', '.gif')
+    .replace('.wwebp', '.webp')
+    .replace('.hheic', '.heic')
+    .replace('.hheif', '.heif');
+
+  const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
   
   return `${API_URL}${finalPath}`;
 };

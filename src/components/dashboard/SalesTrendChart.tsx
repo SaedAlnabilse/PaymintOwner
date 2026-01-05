@@ -102,7 +102,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales 
                         datasets: [
                             {
                                 data: chartData.data,
-                                color: (opacity = 1) => COLORS.primary, // optional
+                                color: (_opacity = 1) => COLORS.primary, // optional
                                 strokeWidth: 3 // optional
                             }
                         ]
@@ -118,7 +118,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales 
                         backgroundGradientTo: COLORS.surface,
                         decimalPlaces: 0,
                         color: (opacity = 1) => isDarkMode ? `rgba(124, 195, 159, ${opacity})` : `rgba(124, 195, 159, ${opacity})`,
-                        labelColor: (opacity = 1) => COLORS.textSecondary,
+                        labelColor: (_opacity = 1) => COLORS.textSecondary,
                         style: {
                             borderRadius: 16
                         },
@@ -134,11 +134,7 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, title = 'Sales 
                         }
                     }}
                     bezier
-                    style={{
-                        marginVertical: 8,
-                        borderRadius: 16,
-                        marginLeft: -20 // Adjust for left padding of chart library
-                    }}
+                    style={styles.chart}
                     withInnerLines={true}
                     withOuterLines={false}
                     withVerticalLines={false}
@@ -250,6 +246,11 @@ const createStyles = (colors: any) => StyleSheet.create({
         fontSize: 15,
         fontWeight: '800',
         letterSpacing: -0.3,
+    },
+    chart: {
+        marginVertical: 8,
+        borderRadius: 16,
+        marginLeft: -20,
     },
 });
 

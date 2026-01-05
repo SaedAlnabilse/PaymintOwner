@@ -15,11 +15,77 @@ import StoreProfileModal from '../components/settings/StoreProfileModal';
 import AppearanceModal from '../components/settings/AppearanceModal';
 import ReceiptSettingsModal from '../components/settings/ReceiptSettingsModal';
 
+interface SettingItemProps {
+  icon: string;
+  title: string;
+  subtitle?: string;
+  hasSwitch?: boolean;
+  value?: boolean;
+  onValueChange?: (value: boolean) => void;
+  onPress?: () => void;
+  iconColor?: string;
+  iconBg?: string;
+  badge?: string;
+  styles: any;
+  colors: any;
+}
+
+const SettingItem: React.FC<SettingItemProps> = ({
+  icon,
+  title,
+  subtitle,
+  hasSwitch,
+  value,
+  onValueChange,
+  onPress,
+  iconColor,
+  iconBg,
+  badge,
+  styles,
+  colors
+}) => (
+  <TouchableOpacity
+    style={[styles.item, { backgroundColor: colors.white }]}
+    onPress={onPress}
+    disabled={hasSwitch}
+    activeOpacity={0.7}
+  >
+    <View style={styles.itemLeft}>
+      <View style={[styles.iconContainer, { backgroundColor: iconBg || colors.containerGray }]}>
+        <Icon name={icon} size={24} color={iconColor || colors.primary} />
+      </View>
+      <View style={styles.itemTextContainer}>
+        <View style={styles.titleRow}>
+          <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>{title}</Text>
+          {badge && (
+            <View style={[styles.badge, { backgroundColor: colors.errorBg }]}>
+              <Text style={[styles.badgeText, { color: colors.errorText }]}>{badge}</Text>
+            </View>
+          )}
+        </View>
+        {subtitle && <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+      </View>
+    </View>
+    {hasSwitch ? (
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.border, true: colors.primary }}
+        thumbColor="#FFF"
+        ios_backgroundColor={colors.border}
+      />
+    ) : (
+      <Icon name="chevron-right" size={22} color={colors.textTertiary} />
+    )}
+  </TouchableOpacity>
+);
+
 const SettingsScreen = () => {
   const { isDarkMode, themeMode } = useTheme();
   const COLORS = getColors(isDarkMode);
   const styles = createStyles(COLORS);
   const dispatch = useDispatch<AppDispatch>();
+  const navigation = useNavigation<any>();
 
   const { notificationsEnabled } = useSelector((state: RootState) => state.notifications);
 
@@ -95,45 +161,8 @@ const SettingsScreen = () => {
     }
   };
 
-  const SettingItem = ({ icon, title, subtitle, hasSwitch, value, onValueChange, onPress, iconColor, iconBg, badge }: any) => (
-    <TouchableOpacity
-      style={[styles.item, { backgroundColor: COLORS.white }]}
-      onPress={onPress}
-      disabled={hasSwitch}
-      activeOpacity={0.7}
-    >
-      <View style={styles.itemLeft}>
-        <View style={[styles.iconContainer, { backgroundColor: iconBg || COLORS.containerGray }]}>
-          <Icon name={icon} size={24} color={iconColor || COLORS.primary} />
-        </View>
-        <View style={styles.itemTextContainer}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.itemTitle, { color: COLORS.textPrimary }]}>{title}</Text>
-            {badge && (
-              <View style={[styles.badge, { backgroundColor: COLORS.errorBg }]}>
-                <Text style={[styles.badgeText, { color: COLORS.errorText }]}>{badge}</Text>
-              </View>
-            )}
-          </View>
-          {subtitle && <Text style={[styles.itemSubtitle, { color: COLORS.textSecondary }]}>{subtitle}</Text>}
-        </View>
-      </View>
-      {hasSwitch ? (
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          trackColor={{ false: COLORS.border, true: COLORS.primary }}
-          thumbColor="#FFF"
-          ios_backgroundColor={COLORS.border}
-        />
-      ) : (
-        <Icon name="chevron-right" size={22} color={COLORS.textTertiary} />
-      )}
-    </TouchableOpacity>
-  );
-
   return (
-    <ScreenContainer style={{ backgroundColor: COLORS.background }}>
+    <ScreenContainer style={styles.screenContainer}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Settings</Text>
@@ -161,6 +190,8 @@ const SettingsScreen = () => {
               iconColor={COLORS.graphGray}
               iconBg={COLORS.containerGray}
               onPress={() => setShowStoreProfile(true)}
+              styles={styles}
+              colors={COLORS}
             />
             <SettingItem
               icon="receipt"
@@ -169,6 +200,8 @@ const SettingsScreen = () => {
               iconColor={COLORS.primary}
               iconBg={COLORS.containerGray}
               onPress={() => setShowReceiptSettings(true)}
+              styles={styles}
+              colors={COLORS}
             />
           </View>
         </View>
@@ -189,6 +222,8 @@ const SettingsScreen = () => {
               onValueChange={handleNotificationsToggle}
               iconColor={COLORS.warning}
               iconBg={COLORS.containerGray}
+              styles={styles}
+              colors={COLORS}
             />
             <SettingItem
               icon="theme-light-dark"
@@ -197,6 +232,8 @@ const SettingsScreen = () => {
               iconColor={isDarkMode ? COLORS.warning : COLORS.textSecondary}
               iconBg={COLORS.containerGray}
               onPress={() => setShowAppearance(true)}
+              styles={styles}
+              colors={COLORS}
             />
             <SettingItem
               icon="translate"
@@ -204,6 +241,8 @@ const SettingsScreen = () => {
               subtitle="English (US)"
               iconColor={COLORS.neutralGray}
               iconBg={COLORS.containerGray}
+              styles={styles}
+              colors={COLORS}
             />
           </View>
         </View>
@@ -215,6 +254,7 @@ const SettingsScreen = () => {
           <Text style={[styles.buildNumber, { color: COLORS.textTertiary }]}>Build 45</Text>
         </View>
       </ScrollView>
+
 
       <StoreProfileModal
         visible={showStoreProfile}
@@ -239,6 +279,9 @@ const SettingsScreen = () => {
 };
 
 const createStyles = (colors: any) => StyleSheet.create({
+  screenContainer: {
+    backgroundColor: colors.background,
+  },
   header: {
     padding: 20,
     paddingBottom: 16,

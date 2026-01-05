@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Pressable,
-  KeyboardAvoidingView,
-  Platform
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -101,7 +99,6 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
   const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
   const [entries, setEntries] = useState<PayInPayOutLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Helper function to combine date and time properly
   const combineDateAndTime = (date: Date, time?: Date): Date => {
@@ -128,7 +125,6 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
   const fetchShiftEntries = useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
 
       const { actualStartDate, actualEndDate } = getFilteredDateRange();
 
@@ -154,7 +150,6 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
       }
     } catch (e: any) {
       console.error('Failed to fetch shift entries:', e);
-      setError(e?.message || 'Failed to load shift entries');
       setEntries([]);
     } finally {
       setIsLoading(false);
@@ -166,29 +161,11 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
       fetchShiftEntries();
     } else {
       setEntries([]);
-      setError(null);
     }
   }, [visible, fetchShiftEntries]);
 
   const calculatedTotalShifts = entries.filter(e => e.type === 'CASH_IN' || e.type === 'SHIFT_START').length;
   const calculatedActiveHours = entries.length > 0 ? activeHours : '0.00 hrs';
-
-  const ListHeader = () => (
-    <View style={styles.summaryContainer}>
-      <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
-        <Text style={styles.summaryCardLabel}>TOTAL SHIFTS</Text>
-        <Text style={styles.summaryCardValue}>{calculatedTotalShifts}</Text>
-      </View>
-      <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
-        <Text style={styles.summaryCardLabel}>ACTIVE HOURS</Text>
-        <Text style={styles.summaryCardValue}>{calculatedActiveHours}</Text>
-      </View>
-      <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
-        <Text style={styles.summaryCardLabel}>LAST UPDATED</Text>
-        <Text style={styles.summaryCardValue}>{lastUpdated}</Text>
-      </View>
-    </View>
-  );
 
   return (
     <Modal
@@ -201,52 +178,59 @@ const TotalTimeWorkedLogModal: React.FC<TotalTimeWorkedLogModalProps> = ({
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
         
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingView}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                Shift Log
-              </Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Icon name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ListHeader />
-
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={true}
-                bounces={true}
-                keyboardShouldPersistTaps="handled"
-              >
-                {entries.length > 0 ? (
-                  entries.map((item) => (
-                    <ShiftLogItem
-                      key={item.id || `${item.type}-${item.timestamp || item.createdAt}`}
-                      item={item}
-                      COLORS={COLORS}
-                    />
-                  ))
-                ) : (
-                  <View style={styles.emptyContainer}>
-                    <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
-                    <Text style={styles.emptyText}>No Records Found</Text>
-                  </View>
-                )}
-              </ScrollView>
-            )}
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              Shift Log
+            </Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color={COLORS.textPrimary} />
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+
+          <View style={styles.summaryContainer}>
+            <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
+              <Text style={styles.summaryCardLabel}>TOTAL SHIFTS</Text>
+              <Text style={styles.summaryCardValue}>{calculatedTotalShifts}</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
+              <Text style={styles.summaryCardLabel}>ACTIVE HOURS</Text>
+              <Text style={styles.summaryCardValue}>{calculatedActiveHours}</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: COLORS.primary }]}>
+              <Text style={styles.summaryCardLabel}>LAST UPDATED</Text>
+              <Text style={styles.summaryCardValue}>{lastUpdated}</Text>
+            </View>
+          </View>
+
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={true}
+              bounces={true}
+            >
+              {entries.length > 0 ? (
+                entries.map((item) => (
+                  <ShiftLogItem
+                    key={item.id || `${item.type}-${item.timestamp || item.createdAt}`}
+                    item={item}
+                    COLORS={COLORS}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Icon name="text-box-search-outline" size={48} color={COLORS.textTertiary} />
+                  <Text style={styles.emptyText}>No Records Found</Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </View>
       </View>
     </Modal>
   );
@@ -258,18 +242,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20, // Add padding
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  keyboardAvoidingView: {
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '85%',
-  },
   modalContent: {
     width: '100%',
-    maxHeight: '100%',
+    maxWidth: 500,
+    maxHeight: '85%',
     backgroundColor: colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
@@ -278,6 +259,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
+    flex: 1, // Allow flex growth
   },
   header: {
     flexDirection: 'row',

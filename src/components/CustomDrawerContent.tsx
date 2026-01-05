@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
-  Image,
 } from 'react-native';
 import {
   DrawerContentScrollView,
   DrawerItemList,
+  DrawerItem,
 } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -23,6 +22,22 @@ import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
 import { clearTenant } from '../store/slices/authSlice';
 
+const InventoryIcon = ({ color }: { color: string }) => (
+  <MaterialCommunityIcon name="package-variant" size={20} color={color} />
+);
+
+const CategoriesIcon = ({ color }: { color: string }) => (
+  <MaterialCommunityIcon name="shape-outline" size={20} color={color} />
+);
+
+const ManufacturingIcon = ({ color }: { color: string }) => (
+  <MaterialCommunityIcon name="barrel" size={20} color={color} />
+);
+
+const RecipesIcon = ({ color }: { color: string }) => (
+  <MaterialCommunityIcon name="food-variant" size={20} color={color} />
+);
+
 const CustomDrawerContent = (props: any) => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
@@ -31,6 +46,7 @@ const CustomDrawerContent = (props: any) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, selectedTenant } = useSelector((state: RootState) => state.auth);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -49,6 +65,72 @@ const CustomDrawerContent = (props: any) => {
     setShowLogoutModal(false);
   };
 
+  // Filter out the items that we want to group manually
+  const inventoryRoutes = ['Products', 'Manufacturing', 'Recipes'];
+
+  // Calculate filtered routes and corresponding index
+  let filteredRoutes = props.state.routes.filter(
+    (route: any) => !inventoryRoutes.includes(route.name)
+  );
+
+  // Find the active route in the original list
+  const activeRoute = props.state.routes[props.state.index];
+  // Find where that route is in our filtered list (will be -1 if it's a grouped item)
+  let filteredIndex = filteredRoutes.findIndex((r: any) => r.key === activeRoute?.key);
+  let filteredDescriptors = props.descriptors;
+
+  // If the active route is hidden (e.g. Products), we need to handle it to avoid crashes
+  // in DrawerItemList (which expects state.routes[state.index] to exist) 
+  // and to ensure no other item is highlighted.
+  if (filteredIndex === -1 && activeRoute) {
+    filteredRoutes = [...filteredRoutes, activeRoute];
+    filteredIndex = filteredRoutes.length - 1;
+
+    // Hide this item visually
+    filteredDescriptors = {
+      ...props.descriptors,
+      [activeRoute.key]: {
+        ...props.descriptors[activeRoute.key],
+        options: {
+          ...props.descriptors[activeRoute.key].options,
+          drawerItemStyle: { display: 'none' }
+        }
+      }
+    };
+  }
+
+  // Create split descriptors to show only relevant items in each section
+  const firstPartDescriptors: any = {};
+  const secondPartDescriptors: any = {};
+
+  filteredRoutes.forEach((route: any, index: number) => {
+    const descriptor = filteredDescriptors[route.key];
+    if (index < 2) {
+      // Visible in first part, hidden in second
+      firstPartDescriptors[route.key] = descriptor;
+      secondPartDescriptors[route.key] = {
+        ...descriptor,
+        options: { ...descriptor.options, drawerItemStyle: { display: 'none' } }
+      };
+    } else {
+      // Hidden in first part, visible in second
+      firstPartDescriptors[route.key] = {
+        ...descriptor,
+        options: { ...descriptor.options, drawerItemStyle: { display: 'none' } }
+      };
+      secondPartDescriptors[route.key] = descriptor;
+    }
+  });
+
+  const sharedProps = {
+    ...props,
+    state: {
+      ...props.state,
+      routes: filteredRoutes,
+      index: filteredIndex,
+    },
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: COLORS.background }]}>
       {/* Brand Header */}
@@ -59,7 +141,7 @@ const CustomDrawerContent = (props: any) => {
             <Text style={styles.switchLinkText}>Switch Restaurant</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.profileSection}>
           <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary + '15' }]}>
             <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
@@ -88,7 +170,63 @@ const CustomDrawerContent = (props: any) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.menuContainer}>
-          <DrawerItemList {...props} />
+          {/* First 2 items (e.g. Dashboard, Sales) */}
+          <DrawerItemList {...sharedProps} descriptors={firstPartDescriptors} />
+
+          {/* Custom Expandable Inventory Group (Position 3) */}
+          <View style={styles.inventoryGroupContainer}>
+            <TouchableOpacity
+              style={styles.groupHeader}
+              onPress={() => setIsInventoryExpanded(!isInventoryExpanded)}
+            >
+              <View style={styles.groupHeaderContent}>
+                <MaterialCommunityIcon name="package-variant-closed" size={22} color={isInventoryExpanded ? theme.colors.primary : COLORS.textSecondary} />
+                <Text style={[
+                  styles.groupHeaderText,
+                  { color: isInventoryExpanded ? theme.colors.primary : COLORS.textSecondary }
+                ]}>Inventory Management</Text>
+              </View>
+              <Icon name={isInventoryExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            {isInventoryExpanded && (
+              <View style={styles.subGroupContainer}>
+                <DrawerItem
+                  label="Product Catalog"
+                  icon={InventoryIcon}
+                  onPress={() => props.navigation.navigate('Products')}
+                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Products')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Raw Materials"
+                  icon={ManufacturingIcon}
+                  onPress={() => props.navigation.navigate('Manufacturing')}
+                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Manufacturing')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Recipe Management"
+                  icon={RecipesIcon}
+                  onPress={() => props.navigation.navigate('Recipes')}
+                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Recipes')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Rest of the items */}
+          <DrawerItemList {...sharedProps} descriptors={secondPartDescriptors} />
         </View>
       </DrawerContentScrollView>
 
@@ -119,7 +257,7 @@ const CustomDrawerContent = (props: any) => {
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (_colors: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -224,6 +362,46 @@ const createStyles = (colors: any) => StyleSheet.create({
   versionText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  inventoryGroupContainer: {
+    marginTop: 4,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    marginHorizontal: 10,
+    marginVertical: 4,
+    borderRadius: 12,
+  },
+  groupHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  groupHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 20,
+  },
+  subGroupContainer: {
+    paddingLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: '#F1F5F9',
+    marginLeft: 28,
+    marginBottom: 8,
+  },
+  subItem: {
+    borderRadius: 8,
+    marginVertical: 2,
+    height: 48,
+  },
+  subItemLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 4, // Removed negative margin and added positive to fix overlap
   },
 });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Platform, KeyboardAvoidingView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -32,60 +32,54 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({ visible, onClose }) =
       <View style={styles.modalOverlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
         
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingView}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Appearance</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Icon name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView 
-              style={styles.scrollView} 
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.content}>
-                {modes.map((mode) => (
-                  <TouchableOpacity
-                    key={mode.id}
-                    style={[
-                      styles.option,
-                      themeMode === mode.id && styles.selectedOption
-                    ]}
-                    onPress={() => {
-                      setThemeMode(mode.id as 'light' | 'dark' | 'auto');
-                      onClose();
-                    }}
-                  >
-                    <View style={styles.optionLeft}>
-                      <Icon 
-                        name={mode.icon} 
-                        size={24} 
-                        color={themeMode === mode.id ? COLORS.primary : COLORS.textSecondary} 
-                      />
-                      <Text style={[
-                        styles.optionText,
-                        themeMode === mode.id && styles.selectedOptionText
-                      ]}>
-                        {mode.label}
-                      </Text>
-                    </View>
-                    {themeMode === mode.id && (
-                      <Icon name="check" size={20} color={COLORS.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Appearance</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color={COLORS.textPrimary} />
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+
+          <ScrollView 
+            style={styles.scrollView} 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+          >
+            <View style={styles.content}>
+              {modes.map((mode) => (
+                <TouchableOpacity
+                  key={mode.id}
+                  style={[
+                    styles.option,
+                    themeMode === mode.id && styles.selectedOption
+                  ]}
+                  onPress={() => {
+                    setThemeMode(mode.id as 'light' | 'dark' | 'auto');
+                    onClose();
+                  }}
+                >
+                  <View style={styles.optionLeft}>
+                    <Icon 
+                      name={mode.icon} 
+                      size={24} 
+                      color={themeMode === mode.id ? COLORS.primary : COLORS.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.optionText,
+                      themeMode === mode.id && styles.selectedOptionText
+                    ]}>
+                      {mode.label}
+                    </Text>
+                  </View>
+                  {themeMode === mode.id && (
+                    <Icon name="check" size={20} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -97,21 +91,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  keyboardAvoidingView: {
-    width: '85%',
-    maxWidth: 340,
-    maxHeight: '85%',
-  },
   modalContent: {
     width: '100%',
+    maxWidth: 400,
     backgroundColor: colors.surface,
     borderRadius: 20,
     overflow: 'hidden',
-    maxHeight: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
