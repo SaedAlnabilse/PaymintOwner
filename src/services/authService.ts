@@ -5,11 +5,42 @@ import { secureStorage } from './secureStorage';
 
 const USER_KEY = '@owner_user';
 const TENANT_KEY = '@owner_tenant';
+const ACCOUNT_KEY = '@owner_account';
+const ESTABLISHMENTS_KEY = '@owner_establishments';
+const CURRENT_ESTABLISHMENT_KEY = '@owner_current_establishment';
 
+// Legacy employee login credentials
 export interface LoginCredentials {
   username: string;
   password: string;
   tenantSlug: string;
+}
+
+// Account-based login credentials (for Owner app)
+export interface AccountLoginCredentials {
+  email: string;
+  password: string;
+}
+
+// Account login response
+export interface AccountLoginResponse {
+  access_token: string;
+  account: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    emailVerified: boolean;
+  };
+  establishments: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+    currency: string;
+    subscriptionStatus: string;
+    trialEndDate?: string;
+  }>;
 }
 
 export interface LoginResponse {
@@ -190,6 +221,135 @@ class AuthService {
       await AsyncStorage.removeItem(TENANT_KEY);
     } catch (error) {
       console.error('Failed to clear tenant:', error);
+    }
+  }
+
+  // ========== ACCOUNT-BASED AUTHENTICATION (New Flow) ==========
+
+  async loginAccount(credentials: AccountLoginCredentials): Promise<AccountLoginResponse> {
+    try {
+      const response = await apiClient.post('/api/accounts/login', {
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+      const data: AccountLoginResponse = response.data;
+
+      if (data.access_token) {
+        await this.storeToken(data.access_token);
+
+        if (data.account) {
+          await this.storeAccount(data.account);
+        }
+
+        if (data.establishments && data.establishments.length > 0) {
+          await this.storeEstablishments(data.establishments);
+        }
+
+        // Send FCM token to backend after successful login
+        await pushNotificationService.sendPendingToken();
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Account login failed:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async logoutAccount(): Promise<void> {
+    try {
+      await apiClient.post('/api/accounts/logout');
+    } catch (error: any) {
+      if (error.response?.status !== 401) {
+        console.warn('Account logout request failed:', error.response?.data || error.message);
+      }
+    } finally {
+      await this.clearToken();
+      await this.clearAccount();
+      await this.clearEstablishments();
+      await this.clearCurrentEstablishment();
+    }
+  }
+
+  async storeAccount(account: any): Promise<void> {
+    try {
+      if (!account) return;
+      await AsyncStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    } catch (error) {
+      console.error('Failed to store account:', error);
+    }
+  }
+
+  async getAccount(): Promise<any | null> {
+    try {
+      const accountJson = await AsyncStorage.getItem(ACCOUNT_KEY);
+      return accountJson ? JSON.parse(accountJson) : null;
+    } catch (error) {
+      console.error('Failed to get account:', error);
+      return null;
+    }
+  }
+
+  async clearAccount(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(ACCOUNT_KEY);
+    } catch (error) {
+      console.error('Failed to clear account:', error);
+    }
+  }
+
+  async storeEstablishments(establishments: any[]): Promise<void> {
+    try {
+      if (!establishments) return;
+      await AsyncStorage.setItem(ESTABLISHMENTS_KEY, JSON.stringify(establishments));
+    } catch (error) {
+      console.error('Failed to store establishments:', error);
+    }
+  }
+
+  async getEstablishments(): Promise<any[] | null> {
+    try {
+      const json = await AsyncStorage.getItem(ESTABLISHMENTS_KEY);
+      return json ? JSON.parse(json) : null;
+    } catch (error) {
+      console.error('Failed to get establishments:', error);
+      return null;
+    }
+  }
+
+  async clearEstablishments(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(ESTABLISHMENTS_KEY);
+    } catch (error) {
+      console.error('Failed to clear establishments:', error);
+    }
+  }
+
+  async storeCurrentEstablishment(establishment: any): Promise<void> {
+    try {
+      if (!establishment) return;
+      await AsyncStorage.setItem(CURRENT_ESTABLISHMENT_KEY, JSON.stringify(establishment));
+    } catch (error) {
+      console.error('Failed to store current establishment:', error);
+    }
+  }
+
+  async getCurrentEstablishment(): Promise<any | null> {
+    try {
+      const json = await AsyncStorage.getItem(CURRENT_ESTABLISHMENT_KEY);
+      return json ? JSON.parse(json) : null;
+    } catch (error) {
+      console.error('Failed to get current establishment:', error);
+      return null;
+    }
+  }
+
+  async clearCurrentEstablishment(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CURRENT_ESTABLISHMENT_KEY);
+    } catch (error) {
+      console.error('Failed to clear current establishment:', error);
     }
   }
 }

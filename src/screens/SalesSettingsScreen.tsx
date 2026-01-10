@@ -47,7 +47,7 @@ const SalesSettingsScreen: React.FC = () => {
   const [cardTypes, setCardTypes] = useState<CardType[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig>({
-    enabled: false, pointsPerCurrency: 1, currencyPerPoint: 1, welcomeBonusPoints: 10, rewards: []
+    enabled: false, pointsPerCurrency: 1, currencyPerPoint: 1, rewards: []
   });
 
   // Original State (to check for changes and discard)
@@ -84,7 +84,7 @@ const SalesSettingsScreen: React.FC = () => {
         discounts: settings.discounts || [],
         paymentMethods: settings.paymentMethods || [],
         cardTypes: settings.cardTypes || [],
-        loyaltyConfig: loyalty || { enabled: false, pointsPerCurrency: 1, currencyPerPoint: 1, welcomeBonusPoints: 10, rewards: [] }
+        loyaltyConfig: loyalty || { enabled: false, pointsPerCurrency: 1, currencyPerPoint: 1, rewards: [] }
       };
 
       setCurrency(state.currency);

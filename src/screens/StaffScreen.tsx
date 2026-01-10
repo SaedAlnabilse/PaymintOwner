@@ -86,7 +86,7 @@ const StaffCard: React.FC<StaffCardProps> = ({
           <View style={styles.statContent}>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sales</Text>
             <Text style={[styles.statValue, { color: colors.textPrimary }]}>
-              {staff.todaySales.toFixed(0)}
+              {staff.todaySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} JOD
             </Text>
           </View>
         </View>

@@ -15,28 +15,11 @@ import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIc
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme as usePaperTheme } from 'react-native-paper';
 import { RootState, AppDispatch } from '../store/store';
-import { logoutUser } from '../store/slices/authSlice';
+import { logoutAccount } from '../store/slices/authSlice';
 import LogoutModal from './common/LogoutModal';
 import { AppTheme } from '../theme/theme';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
-import { clearTenant } from '../store/slices/authSlice';
-
-const InventoryIcon = ({ color }: { color: string }) => (
-  <MaterialCommunityIcon name="package-variant" size={20} color={color} />
-);
-
-const CategoriesIcon = ({ color }: { color: string }) => (
-  <MaterialCommunityIcon name="shape-outline" size={20} color={color} />
-);
-
-const ManufacturingIcon = ({ color }: { color: string }) => (
-  <MaterialCommunityIcon name="barrel" size={20} color={color} />
-);
-
-const RecipesIcon = ({ color }: { color: string }) => (
-  <MaterialCommunityIcon name="food-variant" size={20} color={color} />
-);
 
 const CustomDrawerContent = (props: any) => {
   const { isDarkMode } = useTheme();
@@ -44,9 +27,13 @@ const CustomDrawerContent = (props: any) => {
   const styles = createStyles(COLORS);
   const theme = usePaperTheme() as unknown as AppTheme;
   const dispatch = useDispatch<AppDispatch>();
-  const { user, selectedTenant } = useSelector((state: RootState) => state.auth);
+  const { account, currentEstablishment, establishments } = useSelector((state: RootState) => state.auth);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Expandable menu states
   const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
+  const [isPeopleExpanded, setIsPeopleExpanded] = useState(false);
+  const [isSystemExpanded, setIsSystemExpanded] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -54,39 +41,36 @@ const CustomDrawerContent = (props: any) => {
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
-    dispatch(logoutUser());
-  };
-
-  const handleSwitchRestaurant = () => {
-    dispatch(clearTenant());
+    dispatch(logoutAccount());
   };
 
   const handleCancelLogout = () => {
     setShowLogoutModal(false);
   };
 
-  // Filter out the items that we want to group manually
-  const inventoryRoutes = ['Products', 'Manufacturing', 'Recipes'];
+  // Get display name from account
+  const displayName = account ? `${account.firstName} ${account.lastName}` : 'Account Owner';
+  const displayInitial = account?.firstName?.charAt(0).toUpperCase() || 'A';
 
-  // Calculate filtered routes and corresponding index
+  // Routes to hide from main drawer (grouped routes)
+  const groupedRoutes = [
+    'Products', 'Attributes', 'Manufacturing', 'Recipes', // Inventory
+    'Staff', 'Customers', // People
+    'Settings', 'AuditLog', 'Notifications' // System
+  ];
+
+  // Calculate filtered routes
   let filteredRoutes = props.state.routes.filter(
-    (route: any) => !inventoryRoutes.includes(route.name)
+    (route: any) => !groupedRoutes.includes(route.name)
   );
 
-  // Find the active route in the original list
   const activeRoute = props.state.routes[props.state.index];
-  // Find where that route is in our filtered list (will be -1 if it's a grouped item)
   let filteredIndex = filteredRoutes.findIndex((r: any) => r.key === activeRoute?.key);
   let filteredDescriptors = props.descriptors;
 
-  // If the active route is hidden (e.g. Products), we need to handle it to avoid crashes
-  // in DrawerItemList (which expects state.routes[state.index] to exist) 
-  // and to ensure no other item is highlighted.
   if (filteredIndex === -1 && activeRoute) {
     filteredRoutes = [...filteredRoutes, activeRoute];
     filteredIndex = filteredRoutes.length - 1;
-
-    // Hide this item visually
     filteredDescriptors = {
       ...props.descriptors,
       [activeRoute.key]: {
@@ -99,26 +83,30 @@ const CustomDrawerContent = (props: any) => {
     };
   }
 
-  // Create split descriptors to show only relevant items in each section
-  const firstPartDescriptors: any = {};
-  const secondPartDescriptors: any = {};
+  // Split descriptors for proper rendering
+  const dashboardDescriptors: any = {};
+  const reportsDescriptors: any = {};
+  const salesDescriptors: any = {};
 
   filteredRoutes.forEach((route: any, index: number) => {
     const descriptor = filteredDescriptors[route.key];
-    if (index < 2) {
-      // Visible in first part, hidden in second
-      firstPartDescriptors[route.key] = descriptor;
-      secondPartDescriptors[route.key] = {
-        ...descriptor,
-        options: { ...descriptor.options, drawerItemStyle: { display: 'none' } }
-      };
+    if (route.name === 'Dashboard') {
+      dashboardDescriptors[route.key] = descriptor;
+      reportsDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+      salesDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+    } else if (route.name === 'Reports') {
+      reportsDescriptors[route.key] = descriptor;
+      dashboardDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+      salesDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+    } else if (route.name === 'SalesManagement') {
+      salesDescriptors[route.key] = descriptor;
+      dashboardDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+      reportsDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
     } else {
-      // Hidden in first part, visible in second
-      firstPartDescriptors[route.key] = {
-        ...descriptor,
-        options: { ...descriptor.options, drawerItemStyle: { display: 'none' } }
-      };
-      secondPartDescriptors[route.key] = descriptor;
+      // Hide extra items
+      dashboardDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+      reportsDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
+      salesDescriptors[route.key] = { ...descriptor, options: { ...descriptor.options, drawerItemStyle: { display: 'none' } } };
     }
   });
 
@@ -131,32 +119,38 @@ const CustomDrawerContent = (props: any) => {
     },
   };
 
+  const isRouteActive = (routeName: string) => {
+    return props.state.index === props.state.routes.findIndex((r: any) => r.name === routeName);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: COLORS.background }]}>
       {/* Brand Header */}
       <View style={[styles.header, { backgroundColor: COLORS.white, borderBottomColor: COLORS.borderLight }]}>
         <View style={styles.restaurantInfo}>
-          <Text style={[styles.restaurantName, { color: COLORS.primary }]}>{selectedTenant?.name || 'PayMint Business'}</Text>
-          <TouchableOpacity onPress={handleSwitchRestaurant} style={styles.switchLink}>
-            <Text style={styles.switchLinkText}>Switch Restaurant</Text>
-          </TouchableOpacity>
+          <Text style={[styles.restaurantName, { color: COLORS.primary }]}>{currentEstablishment?.name || 'PayMint Business'}</Text>
+          {establishments.length > 1 && (
+            <Text style={styles.switchLinkText}>
+              {establishments.length} establishments
+            </Text>
+          )}
         </View>
 
         <View style={styles.profileSection}>
           <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary + '15' }]}>
             <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+              {displayInitial}
             </Text>
             <View style={[styles.onlineBadge, { backgroundColor: COLORS.success, borderColor: COLORS.white }]} />
           </View>
 
           <View style={styles.userInfo}>
             <Text style={[styles.userName, { color: COLORS.textPrimary }]} numberOfLines={1}>
-              {user?.name || 'Admin User'}
+              {displayName}
             </Text>
             <View style={styles.roleBadge}>
               <Text style={[styles.userRole, { color: COLORS.textSecondary }]}>
-                {user?.role || 'Administrator'}
+                {account?.email || 'Owner'}
               </Text>
             </View>
           </View>
@@ -170,32 +164,52 @@ const CustomDrawerContent = (props: any) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.menuContainer}>
-          {/* First 2 items (e.g. Dashboard, Sales) */}
-          <DrawerItemList {...sharedProps} descriptors={firstPartDescriptors} />
+          {/* Dashboard */}
+          <DrawerItemList {...sharedProps} descriptors={dashboardDescriptors} />
 
-          {/* Custom Expandable Inventory Group (Position 3) */}
-          <View style={styles.inventoryGroupContainer}>
+          {/* Reports */}
+          <DrawerItemList {...sharedProps} descriptors={reportsDescriptors} />
+
+          {/* Inventory Group */}
+          <View style={styles.groupContainer}>
             <TouchableOpacity
-              style={styles.groupHeader}
+              style={[
+                styles.groupHeader,
+                isInventoryExpanded && { backgroundColor: theme.colors.primary + '05' }
+              ]}
               onPress={() => setIsInventoryExpanded(!isInventoryExpanded)}
             >
               <View style={styles.groupHeaderContent}>
-                <MaterialCommunityIcon name="package-variant-closed" size={22} color={isInventoryExpanded ? theme.colors.primary : COLORS.textSecondary} />
+                <MaterialCommunityIcon
+                  name="package-variant-closed"
+                  size={22}
+                  color={isInventoryExpanded ? theme.colors.primary : COLORS.textSecondary}
+                />
                 <Text style={[
                   styles.groupHeaderText,
                   { color: isInventoryExpanded ? theme.colors.primary : COLORS.textSecondary }
-                ]}>Inventory Management</Text>
+                ]}>Inventory</Text>
               </View>
               <Icon name={isInventoryExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
 
             {isInventoryExpanded && (
-              <View style={styles.subGroupContainer}>
+              <View style={[styles.subGroupContainer, { borderLeftColor: theme.colors.primary + '20' }]}>
                 <DrawerItem
                   label="Product Catalog"
-                  icon={InventoryIcon}
+                  icon={({ color }) => <MaterialCommunityIcon name="package-variant" size={20} color={color} />}
                   onPress={() => props.navigation.navigate('Products')}
-                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Products')}
+                  focused={isRouteActive('Products')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Add-ons & Attributes"
+                  icon={({ color }) => <MaterialCommunityIcon name="tag-multiple-outline" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Attributes')}
+                  focused={isRouteActive('Attributes')}
                   labelStyle={styles.subItemLabel}
                   style={styles.subItem}
                   activeTintColor={theme.colors.primary}
@@ -203,9 +217,9 @@ const CustomDrawerContent = (props: any) => {
                 />
                 <DrawerItem
                   label="Raw Materials"
-                  icon={ManufacturingIcon}
+                  icon={({ color }) => <MaterialCommunityIcon name="barrel" size={20} color={color} />}
                   onPress={() => props.navigation.navigate('Manufacturing')}
-                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Manufacturing')}
+                  focused={isRouteActive('Manufacturing')}
                   labelStyle={styles.subItemLabel}
                   style={styles.subItem}
                   activeTintColor={theme.colors.primary}
@@ -213,9 +227,9 @@ const CustomDrawerContent = (props: any) => {
                 />
                 <DrawerItem
                   label="Recipe Management"
-                  icon={RecipesIcon}
+                  icon={({ color }) => <MaterialCommunityIcon name="food-variant" size={20} color={color} />}
                   onPress={() => props.navigation.navigate('Recipes')}
-                  focused={props.state.index === props.state.routes.findIndex((r: any) => r.name === 'Recipes')}
+                  focused={isRouteActive('Recipes')}
                   labelStyle={styles.subItemLabel}
                   style={styles.subItem}
                   activeTintColor={theme.colors.primary}
@@ -225,8 +239,116 @@ const CustomDrawerContent = (props: any) => {
             )}
           </View>
 
-          {/* Rest of the items */}
-          <DrawerItemList {...sharedProps} descriptors={secondPartDescriptors} />
+          {/* People Group */}
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={[
+                styles.groupHeader,
+                isPeopleExpanded && { backgroundColor: theme.colors.primary + '05' }
+              ]}
+              onPress={() => setIsPeopleExpanded(!isPeopleExpanded)}
+            >
+              <View style={styles.groupHeaderContent}>
+                <MaterialCommunityIcon
+                  name="account-group-outline"
+                  size={22}
+                  color={isPeopleExpanded ? theme.colors.primary : COLORS.textSecondary}
+                />
+                <Text style={[
+                  styles.groupHeaderText,
+                  { color: isPeopleExpanded ? theme.colors.primary : COLORS.textSecondary }
+                ]}>People</Text>
+              </View>
+              <Icon name={isPeopleExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            {isPeopleExpanded && (
+              <View style={[styles.subGroupContainer, { borderLeftColor: theme.colors.primary + '20' }]}>
+                <DrawerItem
+                  label="Staff Management"
+                  icon={({ color }) => <MaterialCommunityIcon name="account-group" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Staff')}
+                  focused={isRouteActive('Staff')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Customers & Loyalty"
+                  icon={({ color }) => <MaterialCommunityIcon name="account-heart-outline" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Customers')}
+                  focused={isRouteActive('Customers')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Sales Settings */}
+          <DrawerItemList {...sharedProps} descriptors={salesDescriptors} />
+
+          {/* System Group */}
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={[
+                styles.groupHeader,
+                isSystemExpanded && { backgroundColor: theme.colors.primary + '05' }
+              ]}
+              onPress={() => setIsSystemExpanded(!isSystemExpanded)}
+            >
+              <View style={styles.groupHeaderContent}>
+                <MaterialCommunityIcon
+                  name="cog-outline"
+                  size={22}
+                  color={isSystemExpanded ? theme.colors.primary : COLORS.textSecondary}
+                />
+                <Text style={[
+                  styles.groupHeaderText,
+                  { color: isSystemExpanded ? theme.colors.primary : COLORS.textSecondary }
+                ]}>System</Text>
+              </View>
+              <Icon name={isSystemExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            {isSystemExpanded && (
+              <View style={[styles.subGroupContainer, { borderLeftColor: theme.colors.primary + '20' }]}>
+                <DrawerItem
+                  label="Settings"
+                  icon={({ color }) => <MaterialCommunityIcon name="cog" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Settings')}
+                  focused={isRouteActive('Settings')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Activity Logs"
+                  icon={({ color }) => <MaterialCommunityIcon name="shield-check-outline" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('AuditLog')}
+                  focused={isRouteActive('AuditLog')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Cash Alerts"
+                  icon={({ color }) => <MaterialCommunityIcon name="alert-circle-outline" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Notifications')}
+                  focused={isRouteActive('Notifications')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+              </View>
+            )}
+          </View>
         </View>
       </DrawerContentScrollView>
 
@@ -276,13 +398,9 @@ const createStyles = (_colors: any) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
   },
-  switchLink: {
-    alignSelf: 'flex-start',
-  },
   switchLinkText: {
     fontSize: 12,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontWeight: '600',
     color: '#64748B',
   },
   profileSection: {
@@ -363,8 +481,9 @@ const createStyles = (_colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  inventoryGroupContainer: {
-    marginTop: 4,
+  groupContainer: {
+    marginTop: 8,
+    marginBottom: 4,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -389,7 +508,6 @@ const createStyles = (_colors: any) => StyleSheet.create({
   subGroupContainer: {
     paddingLeft: 16,
     borderLeftWidth: 2,
-    borderLeftColor: '#F1F5F9',
     marginLeft: 28,
     marginBottom: 8,
   },
@@ -401,7 +519,7 @@ const createStyles = (_colors: any) => StyleSheet.create({
   subItemLabel: {
     fontSize: 13,
     fontWeight: '500',
-    marginLeft: 4, // Removed negative margin and added positive to fix overlap
+    marginLeft: 4,
   },
 });
 

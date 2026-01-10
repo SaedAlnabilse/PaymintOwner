@@ -6,8 +6,11 @@ import { View, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme as usePaperTheme } from 'react-native-paper';
 
-import LoginScreen from '../screens/LoginScreen';
-import TenantSelectionScreen from '../screens/TenantSelectionScreen';
+// Auth screens
+import AccountLoginScreen from '../screens/AccountLoginScreen';
+import EstablishmentSelectorScreen from '../screens/EstablishmentSelectorScreen';
+
+// Main app screens
 import DashboardScreen from '../screens/DashboardScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import ProductManagementScreen from '../screens/ProductManagementScreen';
@@ -21,6 +24,7 @@ import CustomDrawerContent from '../components/CustomDrawerContent';
 import ManufacturingInventoryScreen from '../screens/ManufacturingInventoryScreen';
 import RecipeManagementScreen from '../screens/RecipeManagementScreen';
 import SalesSettingsScreen from '../screens/SalesSettingsScreen';
+import AttributesScreen from '../screens/AttributesScreen';
 
 import { RootState, AppDispatch } from '../store/store';
 import { checkAuthStatus } from '../store/slices/authSlice';
@@ -38,7 +42,7 @@ const DrawerNavigator = () => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
   const theme = usePaperTheme() as unknown as AppTheme;
-  const { selectedTenant } = useSelector((state: RootState) => state.auth);
+  const { currentEstablishment, account } = useSelector((state: RootState) => state.auth);
 
   return (
     <Drawer.Navigator
@@ -48,8 +52,8 @@ const DrawerNavigator = () => {
         header: ({ navigation }) => {
           return (
             <BackOfficeHeader
-              storeName={selectedTenant?.name || "Paymint Store"}
-              userName="Owner"
+              storeName={currentEstablishment?.name || "PayMint Store"}
+              userName={account?.firstName || "Owner"}
               storeStatus="CLOSED"
               onMenuPress={() => navigation.toggleDrawer()}
               onNotificationsPress={() => navigation.navigate('Notifications')}
@@ -113,6 +117,16 @@ const DrawerNavigator = () => {
             <Icon name="package-variant-closed" size={22} color={color} />
           ),
           title: 'Product Catalog'
+        }}
+      />
+      <Drawer.Screen
+        name="Attributes"
+        component={AttributesScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="tag-multiple-outline" size={22} color={color} />
+          ),
+          title: 'Add-ons & Attributes'
         }}
       />
       <Drawer.Screen
@@ -202,7 +216,9 @@ const DrawerNavigator = () => {
 
 const AppNavigator = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated, isLoading, selectedTenant } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading, account, currentEstablishment, establishments } = useSelector(
+    (state: RootState) => state.auth
+  );
 
   // Handle app state changes for authentication
   useAppStateAuth();
@@ -219,18 +235,29 @@ const AppNavigator = () => {
     );
   }
 
+  // Determine which screen to show based on auth state
+  // Flow: Not authenticated -> AccountLoginScreen
+  //       Authenticated but no establishment selected (and multiple establishments) -> EstablishmentSelectorScreen
+  //       Authenticated with establishment selected -> Main App
+  const needsEstablishmentSelection = isAuthenticated && account && !currentEstablishment && establishments.length > 1;
+  const hasNoEstablishments = isAuthenticated && account && establishments.length === 0;
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isAuthenticated ? (
+      {isAuthenticated && currentEstablishment ? (
+        // User is authenticated AND has selected an establishment -> Show main app
         <Stack.Screen name="Main" component={DrawerNavigator} />
-      ) : (
+      ) : isAuthenticated && account ? (
+        // User is authenticated but needs to select an establishment
+        // (or has no establishments - show selector with empty state)
         <>
-          {!selectedTenant ? (
-            <Stack.Screen name="TenantSelection" component={TenantSelectionScreen} />
-          ) : (
-            <Stack.Screen name="Login" component={LoginScreen} />
+          {(needsEstablishmentSelection || hasNoEstablishments) && (
+            <Stack.Screen name="EstablishmentSelector" component={EstablishmentSelectorScreen} />
           )}
         </>
+      ) : (
+        // User is not authenticated -> Show login
+        <Stack.Screen name="AccountLogin" component={AccountLoginScreen} />
       )}
     </Stack.Navigator>
   );

@@ -36,7 +36,7 @@ export interface LoyaltyConfig {
   enabled: boolean;
   pointsPerCurrency: number;
   currencyPerPoint: number;
-  welcomeBonusPoints?: number;
+
   rewards: LoyaltyReward[];
 }
 

@@ -1,10 +1,11 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService, LoginCredentials } from '../../services/authService';
+import { authService, LoginCredentials, AccountLoginCredentials } from '../../services/authService';
 import { RootState } from '../store';
 
 const APP_BACKGROUND_TIME_KEY = '@app_background_time';
 
+// Legacy tenant interface (for backward compatibility)
 interface Tenant {
   id: string;
   name: string;
@@ -12,13 +13,39 @@ interface Tenant {
   logo?: string;
 }
 
+// Account interface (new)
+interface Account {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  emailVerified?: boolean;
+}
+
+// Establishment interface (new)
+interface Establishment {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  currency: string;
+  subscriptionStatus: string;
+  trialEndDate?: string;
+}
+
 interface AuthState {
+  // Legacy fields (kept for backward compatibility)
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   user: { id: string; name: string; role: string; email: string } | null;
   error: string | null;
   selectedTenant: Tenant | null;
+
+  // New Account-based auth fields
+  account: Account | null;
+  establishments: Establishment[];
+  currentEstablishment: Establishment | null;
 }
 
 const initialState: AuthState = {
@@ -28,6 +55,10 @@ const initialState: AuthState = {
   user: null,
   error: null,
   selectedTenant: null,
+  // New fields
+  account: null,
+  establishments: [],
+  currentEstablishment: null,
 };
 
 // Helper function to clear background time
@@ -82,25 +113,73 @@ export const checkAuthStatus = createAsyncThunk(
       const user = await authService.getUser();
       const tenant = await authService.getTenant();
 
+      // Also check for new account-based auth
+      const account = await authService.getAccount();
+      const establishments = await authService.getEstablishments();
+      const currentEstablishment = await authService.getCurrentEstablishment();
+
+      // If we have account-based auth, use that
+      if (token && account) {
+        console.log('🔐 Found stored account session');
+        return {
+          token,
+          user: null,
+          tenant: null,
+          account,
+          establishments: establishments || [],
+          currentEstablishment,
+        };
+      }
+
+      // Legacy user-based auth
       if (!token || !user) {
         console.log('🔐 No stored session found');
-        return { token: null, user: null, tenant };
+        return { token: null, user: null, tenant, account: null, establishments: [], currentEstablishment: null };
       }
 
       console.log('🔐 Found stored session, trusting token...');
-      
+
       // OPTIMISTIC AUTH: Trust the stored token immediately.
-      // We removed the background getProfile() call to prevent race conditions 
+      // We removed the background getProfile() call to prevent race conditions
       // where headers aren't set yet, which was causing accidental logouts.
 
       return {
         token,
         user,
-        tenant
+        tenant,
+        account: null,
+        establishments: [],
+        currentEstablishment: null,
       };
     } catch (error: any) {
       console.log('🔐 Authentication check failed:', error.message);
       return rejectWithValue('Authentication check failed');
+    }
+  }
+);
+
+// ========== NEW ACCOUNT-BASED AUTH THUNKS ==========
+
+export const loginAccount = createAsyncThunk(
+  'auth/loginAccount',
+  async (credentials: AccountLoginCredentials, { rejectWithValue }) => {
+    try {
+      const response = await authService.loginAccount(credentials);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
+    }
+  }
+);
+
+export const logoutAccount = createAsyncThunk(
+  'auth/logoutAccount',
+  async (_, { rejectWithValue }) => {
+    try {
+      await authService.logoutAccount();
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      // We continue to clear state even if API fails
     }
   }
 );
@@ -132,6 +211,22 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       authService.clearToken();
       authService.clearUser();
+    },
+    // New account-based reducers
+    selectEstablishment(state, action: PayloadAction<Establishment>) {
+      state.currentEstablishment = action.payload;
+      // Also set it as the legacy selectedTenant for compatibility
+      state.selectedTenant = {
+        id: action.payload.id,
+        name: action.payload.name,
+        slug: action.payload.slug,
+      };
+      authService.storeCurrentEstablishment(action.payload);
+      authService.storeTenant({
+        id: action.payload.id,
+        name: action.payload.name,
+        slug: action.payload.slug,
+      });
     },
   },
   extraReducers: (builder) => {
@@ -165,7 +260,12 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.user = action.payload.user;
         state.selectedTenant = action.payload.tenant;
-        state.isAuthenticated = !!action.payload.token;
+        // New account-based fields
+        state.account = action.payload.account;
+        state.establishments = action.payload.establishments || [];
+        state.currentEstablishment = action.payload.currentEstablishment;
+        // Authentication is based on having a token (either legacy or account-based)
+        state.isAuthenticated = !!action.payload.token && (!!action.payload.user || !!action.payload.account);
         state.isLoading = false;
       })
       .addCase(checkAuthStatus.rejected, (state) => {
@@ -173,6 +273,9 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.token = null;
         state.user = null;
+        state.account = null;
+        state.establishments = [];
+        state.currentEstablishment = null;
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.token = null;
@@ -180,9 +283,56 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isLoading = false;
         state.error = null;
+      })
+      // Account-based auth handlers
+      .addCase(loginAccount.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginAccount.fulfilled, (state, action) => {
+        state.token = action.payload.access_token;
+        state.account = action.payload.account;
+        state.establishments = action.payload.establishments || [];
+        state.isAuthenticated = true;
+        state.isLoading = false;
+        state.error = null;
+
+        // If there's only one establishment, auto-select it
+        if (action.payload.establishments?.length === 1) {
+          const est = action.payload.establishments[0];
+          state.currentEstablishment = est;
+          state.selectedTenant = {
+            id: est.id,
+            name: est.name,
+            slug: est.slug,
+          };
+          authService.storeCurrentEstablishment(est);
+          authService.storeTenant({
+            id: est.id,
+            name: est.name,
+            slug: est.slug,
+          });
+        }
+
+        clearBackgroundTime();
+      })
+      .addCase(loginAccount.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(logoutAccount.fulfilled, (state) => {
+        state.token = null;
+        state.user = null;
+        state.account = null;
+        state.establishments = [];
+        state.currentEstablishment = null;
+        state.selectedTenant = null;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });
 
-export const { logout, clearError, selectTenant, clearTenant } = authSlice.actions;
+export const { logout, clearError, selectTenant, clearTenant, selectEstablishment } = authSlice.actions;
 export default authSlice.reducer;

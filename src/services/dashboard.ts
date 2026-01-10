@@ -12,6 +12,20 @@ export interface DashboardMetrics {
   payOut: number;
   totalTimeWorked: string;
   shiftStatus: 'ACTIVE' | 'LAST_SHIFT' | 'NO_SHIFT' | 'CLOSED';
+  activeShift?: {
+    id: string;
+    user: {
+      id: string;
+      name: string;
+      username: string;
+    };
+    startTime: string;
+    endTime?: string;
+    closingBalance?: number;
+    openingBalance?: number;
+    discrepancy?: number;
+    autoClose?: boolean;
+  };
 }
 
 export interface DashboardSummary {

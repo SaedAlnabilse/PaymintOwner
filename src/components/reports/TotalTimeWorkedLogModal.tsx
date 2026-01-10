@@ -58,7 +58,7 @@ const ShiftLogItem = React.memo(({ item, COLORS }: { item: PayInPayOutLogEntry; 
           </Text>
         </View>
         <Text style={styles.logAmount}>
-          {typeof item.amount === 'number' ? `${item.amount.toFixed(3)} JOD` : ''}
+          {typeof item.amount === 'number' ? `${item.amount.toFixed(2)} JOD` : ''}
         </Text>
       </View>
 

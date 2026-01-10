@@ -97,7 +97,7 @@ const LoyaltyGroup: React.FC<LoyaltyGroupProps> = ({ config, onChange, currency,
         </Text>
         <View style={[styles.earningRuleCard, { backgroundColor: COLORS.background, borderColor: COLORS.borderLight }]}>
           <View style={styles.earningRuleRow}>
-            
+
             {/* Currency Per Point */}
             <View style={styles.ruleFieldBlock}>
               <Text style={[styles.ruleLabelText, { color: COLORS.textSecondary }]}>For every</Text>
@@ -134,23 +134,7 @@ const LoyaltyGroup: React.FC<LoyaltyGroupProps> = ({ config, onChange, currency,
               </View>
             </View>
 
-            {/* Welcome Bonus */}
-            <View style={styles.ruleFieldBlock}>
-              <Text style={[styles.ruleLabelText, { color: COLORS.textSecondary }]}>Welcome Bonus</Text>
-              <View style={[styles.inputCard, { borderColor: COLORS.borderLight, backgroundColor: COLORS.white }]}>
-                <View style={[styles.prefixBox, { borderRightColor: COLORS.borderLight, backgroundColor: COLORS.background }]}>
-                   <Text style={[styles.prefixText, { color: COLORS.primary }]}>PTS</Text>
-                </View>
-                <TextInput
-                  style={[styles.input, { color: COLORS.textPrimary }]}
-                  value={config.welcomeBonusPoints ? String(config.welcomeBonusPoints) : ''}
-                  onChangeText={(val) => onChange({ ...config, enabled: true, welcomeBonusPoints: parseNumber(val) })}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={COLORS.textTertiary}
-                />
-              </View>
-            </View>
+
 
           </View>
         </View>
@@ -162,11 +146,11 @@ const LoyaltyGroup: React.FC<LoyaltyGroupProps> = ({ config, onChange, currency,
           <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>
             <Icon name="gift" size={16} color={COLORS.primary} /> Rewards
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.addButton, { backgroundColor: COLORS.primary }]}
             onPress={() => {
-                setEditingReward(null);
-                setShowRewardModal(true);
+              setEditingReward(null);
+              setShowRewardModal(true);
             }}
           >
             <Icon name="plus" size={18} color="#FFF" />
@@ -207,7 +191,7 @@ const LoyaltyGroup: React.FC<LoyaltyGroupProps> = ({ config, onChange, currency,
         )}
       </View>
 
-      <LoyaltyRewardModal 
+      <LoyaltyRewardModal
         isVisible={showRewardModal}
         onClose={() => setShowRewardModal(false)}
         onSave={handleRewardSave}

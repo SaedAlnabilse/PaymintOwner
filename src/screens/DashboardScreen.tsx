@@ -438,6 +438,65 @@ const DashboardScreen = () => {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
           >
             <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+              {/* Shift Status Banner */}
+              {selectedPeriod === 'today' && dashboardData && dashboardData.activeShift && (
+                <View style={[
+                  styles.shiftBanner,
+                  {
+                    backgroundColor: dashboardData.shiftStatus === 'ACTIVE'
+                      ? `${COLORS.primary}26`
+                      : `${COLORS.error}26`,
+                    borderColor: dashboardData.shiftStatus === 'ACTIVE'
+                      ? `${COLORS.primary}66`
+                      : `${COLORS.error}66`
+                  }
+                ]}>
+                  <View style={styles.shiftBannerLeft}>
+                    <View style={[
+                      styles.shiftStatusDot,
+                      {
+                        backgroundColor: dashboardData.shiftStatus === 'ACTIVE'
+                          ? COLORS.primary
+                          : COLORS.error
+                      }
+                    ]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.shiftBannerTitle, { color: COLORS.textPrimary }]}>
+                        {dashboardData.shiftStatus === 'ACTIVE' ? 'Active Shift' : 'Last Shift'}
+                      </Text>
+                      <Text style={[styles.shiftBannerSubtitle, { color: COLORS.textSecondary }]}>
+                        {dashboardData.shiftStatus === 'ACTIVE' ? 'Started' : 'Closed'} by {dashboardData.activeShift.user?.name || 'Staff'} at{' '}
+                        {moment(dashboardData.activeShift.startTime).format('h:mm A')}
+                        {dashboardData.shiftStatus === 'LAST_SHIFT' && dashboardData.activeShift.autoClose && (
+                          <Text style={{ color: COLORS.error, fontWeight: '700' }}> (Automatically Cashed Out)</Text>
+                        )}
+                      </Text>
+                      {dashboardData.shiftStatus === 'LAST_SHIFT' && dashboardData.activeShift.discrepancy !== undefined && dashboardData.activeShift.discrepancy !== 0 && (
+                        <View style={[styles.discrepancyBadge, {
+                          backgroundColor: COLORS.errorBg,
+                          marginTop: 8,
+                        }]}>
+                          <Icon
+                            name={dashboardData.activeShift.discrepancy > 0 ? "arrow-up-circle" : "arrow-down-circle"}
+                            size={16}
+                            color={COLORS.error}
+                          />
+                          <Text style={[styles.discrepancyText, { color: COLORS.error }]}>
+                            {dashboardData.activeShift.discrepancy > 0 ? 'Overage' : 'Shortage'}: {dashboardData.activeShift.discrepancy > 0 ? '+' : ''}{dashboardData.activeShift.discrepancy?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} JOD
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.shiftBannerRight}>
+                    <Text style={[styles.shiftBannerAmount, { color: COLORS.textPrimary }]}>
+                      {formatCurrency(metrics.netSales || 0)}
+                    </Text>
+                    <Text style={[styles.shiftBannerLabel, { color: COLORS.textSecondary }]}>Shift Sales</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Featured Sales Card with Store Status */}
               <View style={styles.featuredCard}>
                 <View style={styles.featuredCardHeader}>
@@ -1020,6 +1079,67 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.1,
+  },
+  shiftBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+    // iOS Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    // Android Shadow
+    elevation: 4,
+  },
+  shiftBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+  },
+  shiftStatusDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  shiftBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  shiftBannerSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  discrepancyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  discrepancyText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  shiftBannerRight: {
+    alignItems: 'flex-end',
+  },
+  shiftBannerAmount: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  shiftBannerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

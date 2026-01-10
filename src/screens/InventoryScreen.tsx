@@ -323,9 +323,9 @@ const InventoryScreen = () => {
 
           <View style={styles.gridItemFooter}>
             <Text style={[styles.gridItemPrice, { color: COLORS.primary }]}>
-              ${item.price.toFixed(2)}
+              {item.price.toFixed(2)} JOD
             </Text>
-            
+
             {item.trackStock && (
               <View style={[styles.gridStockBadge, { backgroundColor: stockStatus.bg }]}>
                 <Text style={[styles.gridStockText, { color: stockStatus.color }]}>
@@ -409,7 +409,7 @@ const InventoryScreen = () => {
           </View>
           <View style={styles.compactValuation}>
             <Text style={[styles.compactValuationValue, { color: COLORS.textPrimary }]}>
-              {valuation.retail.toLocaleString('en-US', { style: 'currency', currency: 'JOD' })}
+              {valuation.retail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} JOD
             </Text>
             <Text style={[styles.compactValuationLabel, { color: COLORS.textSecondary }]}>Total Value</Text>
           </View>
@@ -538,7 +538,7 @@ const InventoryScreen = () => {
           <Text style={[styles.sortLabel, { color: COLORS.textSecondary }]}>Sort by:</Text>
           {[
             { key: 'name' as SortOption, label: 'Priority', icon: 'sort-alphabetical-ascending' },
-            { key: 'price' as SortOption, label: 'Price', icon: 'currency-usd' },
+            { key: 'price' as SortOption, label: 'Price', icon: 'cash-multiple' },
             { key: 'stock' as SortOption, label: 'Stock', icon: 'package-variant' },
           ].map((option) => (
             <TouchableOpacity
