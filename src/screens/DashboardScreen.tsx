@@ -15,7 +15,9 @@ import { getSalesComparison, getSalesByCategory, SalesComparison, CategorySales,
 import { HistoricalOrder, OrderDetails } from '../types/reports';
 
 // Import new dashboard components
-import { SalesTrendChart, TopEmployeesCard, RecentOrdersFeed } from '../components/dashboard';
+import SalesTrendChart from '../components/dashboard/SalesTrendChart';
+import TopEmployeesCard from '../components/dashboard/TopEmployeesCard';
+import RecentOrdersFeed from '../components/dashboard/RecentOrdersFeed';
 import OrderDetailsModal from '../components/reports/OrderDetailsModal';
 
 const DashboardScreen = () => {

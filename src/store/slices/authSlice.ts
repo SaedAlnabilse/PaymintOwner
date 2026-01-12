@@ -26,7 +26,7 @@ interface Account {
 interface Establishment {
   id: string;
   name: string;
-  slug: string;
+  establishmentLoginId: string;
   type: string;
   currency: string;
   subscriptionStatus: string;
@@ -219,13 +219,13 @@ const authSlice = createSlice({
       state.selectedTenant = {
         id: action.payload.id,
         name: action.payload.name,
-        slug: action.payload.slug,
+        slug: action.payload.establishmentLoginId,
       };
       authService.storeCurrentEstablishment(action.payload);
       authService.storeTenant({
         id: action.payload.id,
         name: action.payload.name,
-        slug: action.payload.slug,
+        slug: action.payload.establishmentLoginId,
       });
     },
   },
@@ -304,13 +304,13 @@ const authSlice = createSlice({
           state.selectedTenant = {
             id: est.id,
             name: est.name,
-            slug: est.slug,
+            slug: est.establishmentLoginId,
           };
           authService.storeCurrentEstablishment(est);
           authService.storeTenant({
             id: est.id,
             name: est.name,
-            slug: est.slug,
+            slug: est.establishmentLoginId,
           });
         }
 

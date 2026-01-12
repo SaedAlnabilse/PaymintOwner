@@ -25,6 +25,7 @@ export const LIGHT_COLORS = {
 
   // BACKGROUNDS
   background: '#F8FAFC',     // Main background
+  backgroundSecondary: '#F1F5F9', // Secondary background
   cardBackground: '#E8E8E8', // Card background
   surface: '#FFFFFF',        // Surface/card white
 
@@ -90,6 +91,7 @@ export const DARK_COLORS = {
 
   // BACKGROUNDS
   background: '#121212',     // Material Design standard dark background
+  backgroundSecondary: '#1E1E1E', // Secondary background
   cardBackground: '#2F2F2F', // Border/subtle container
   surface: '#1E1E1E',        // Lighter grey for Cards/Headers
 

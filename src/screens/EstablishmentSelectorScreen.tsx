@@ -21,7 +21,7 @@ interface Establishment {
   type: string;
   currency: string;
   subscriptionStatus: string;
-  slug?: string;
+  establishmentLoginId: string;
 }
 
 const EstablishmentSelectorScreen = () => {

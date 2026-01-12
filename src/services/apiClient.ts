@@ -66,14 +66,15 @@ apiClient.interceptors.request.use(
   config => {
     const state = store.getState();
     const token = state.auth.token;
-    const tenantSlug = state.auth.selectedTenant?.slug;
+    // selectedTenant.id holds the UUID which the backend expects
+    const establishmentId = state.auth.selectedTenant?.id;
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (tenantSlug) {
-      config.headers['x-tenant-slug'] = tenantSlug;
+    if (establishmentId) {
+      config.headers['x-establishment-id'] = establishmentId;
     }
 
     return config;

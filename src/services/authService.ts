@@ -35,7 +35,7 @@ export interface AccountLoginResponse {
   establishments: Array<{
     id: string;
     name: string;
-    slug: string;
+    establishmentLoginId: string;
     type: string;
     currency: string;
     subscriptionStatus: string;

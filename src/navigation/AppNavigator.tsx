@@ -9,6 +9,8 @@ import { useTheme as usePaperTheme } from 'react-native-paper';
 // Auth screens
 import AccountLoginScreen from '../screens/AccountLoginScreen';
 import EstablishmentSelectorScreen from '../screens/EstablishmentSelectorScreen';
+import SignUpScreen from '../screens/SignUpScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 
 // Main app screens
 import DashboardScreen from '../screens/DashboardScreen';
@@ -25,6 +27,23 @@ import ManufacturingInventoryScreen from '../screens/ManufacturingInventoryScree
 import RecipeManagementScreen from '../screens/RecipeManagementScreen';
 import SalesSettingsScreen from '../screens/SalesSettingsScreen';
 import AttributesScreen from '../screens/AttributesScreen';
+
+// New backoffice screens
+import OrdersScreen from '../screens/OrdersScreen';
+import DiscountsScreen from '../screens/DiscountsScreen';
+import PaymentMethodsScreen from '../screens/PaymentMethodsScreen';
+import BillingScreen from '../screens/BillingScreen';
+import EstablishmentsScreen from '../screens/EstablishmentsScreen';
+import AdminUsersScreen from '../screens/AdminUsersScreen';
+import OwnerOverviewScreen from '../screens/OwnerOverviewScreen';
+import BrandsScreen from '../screens/BrandsScreen';
+import BrandDashboardScreen from '../screens/BrandDashboardScreen';
+import BrandLocationsScreen from '../screens/BrandLocationsScreen';
+import BrandTeamScreen from '../screens/BrandTeamScreen';
+import MergeEstablishmentsScreen from '../screens/MergeEstablishmentsScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 
 import { RootState, AppDispatch } from '../store/store';
 import { checkAuthStatus } from '../store/slices/authSlice';
@@ -210,6 +229,86 @@ const DrawerNavigator = () => {
           title: 'Settings'
         }}
       />
+      <Drawer.Screen
+        name="Orders"
+        component={OrdersScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="receipt" size={22} color={color} />
+          ),
+          title: 'Orders History'
+        }}
+      />
+      <Drawer.Screen
+        name="Discounts"
+        component={DiscountsScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="percent" size={22} color={color} />
+          ),
+          title: 'Discounts'
+        }}
+      />
+      <Drawer.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="credit-card-multiple" size={22} color={color} />
+          ),
+          title: 'Payment Config'
+        }}
+      />
+      <Drawer.Screen
+        name="Billing"
+        component={BillingScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="credit-card" size={22} color={color} />
+          ),
+          title: 'Billing'
+        }}
+      />
+      <Drawer.Screen
+        name="Establishments"
+        component={EstablishmentsScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="store-outline" size={22} color={color} />
+          ),
+          title: 'Establishments'
+        }}
+      />
+      <Drawer.Screen
+        name="AdminUsers"
+        component={AdminUsersScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="account-key" size={22} color={color} />
+          ),
+          title: 'Admin Users'
+        }}
+      />
+      <Drawer.Screen
+        name="OwnerOverview"
+        component={OwnerOverviewScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="view-dashboard" size={22} color={color} />
+          ),
+          title: 'Owner Overview'
+        }}
+      />
+      <Drawer.Screen
+        name="Brands"
+        component={BrandsScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="tag-heart" size={22} color={color} />
+          ),
+          title: 'Brands'
+        }}
+      />
     </Drawer.Navigator >
   );
 };
@@ -246,7 +345,14 @@ const AppNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated && currentEstablishment ? (
         // User is authenticated AND has selected an establishment -> Show main app
-        <Stack.Screen name="Main" component={DrawerNavigator} />
+        <>
+          <Stack.Screen name="Main" component={DrawerNavigator} />
+          <Stack.Screen name="BrandDashboard" component={BrandDashboardScreen} />
+          <Stack.Screen name="BrandLocations" component={BrandLocationsScreen} />
+          <Stack.Screen name="BrandTeam" component={BrandTeamScreen} />
+          <Stack.Screen name="MergeEstablishments" component={MergeEstablishmentsScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        </>
       ) : isAuthenticated && account ? (
         // User is authenticated but needs to select an establishment
         // (or has no establishments - show selector with empty state)
@@ -254,10 +360,17 @@ const AppNavigator = () => {
           {(needsEstablishmentSelection || hasNoEstablishments) && (
             <Stack.Screen name="EstablishmentSelector" component={EstablishmentSelectorScreen} />
           )}
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         </>
       ) : (
-        // User is not authenticated -> Show login
-        <Stack.Screen name="AccountLogin" component={AccountLoginScreen} />
+        // User is not authenticated -> Show login and auth screens
+        <>
+          <Stack.Screen name="AccountLogin" component={AccountLoginScreen} />
+          <Stack.Screen name="SignUp" component={SignUpScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

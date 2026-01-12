@@ -15,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { AppDispatch, RootState } from '../store/store';
 import { loginAccount, clearError } from '../store/slices/authSlice';
 
 const AccountLoginScreen = () => {
+  const navigation = useNavigation<any>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -221,12 +223,28 @@ const AccountLoginScreen = () => {
                       </>
                     )}
                   </TouchableOpacity>
+
+                  {/* Forgot Password Link */}
+                  <TouchableOpacity
+                    style={styles.forgotPasswordLink}
+                    onPress={() => navigation.navigate('ForgotPassword')}
+                  >
+                    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Security Badge */}
                 <View style={styles.securityBadge}>
                   <MaterialCommunityIcon name="shield-lock" size={16} color="#7CC39F" />
                   <Text style={styles.securityText}>Secure Account Access</Text>
+                </View>
+
+                {/* Sign Up Link */}
+                <View style={styles.signUpContainer}>
+                  <Text style={styles.signUpText}>Don't have an account? </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                    <Text style={styles.signUpLink}>Create Account</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -443,6 +461,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
     letterSpacing: 0.3,
+  },
+  forgotPasswordLink: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7CC39F',
+  },
+  signUpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  signUpText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#7CC39F',
   },
   footer: {
     marginTop: 32,
