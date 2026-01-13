@@ -194,7 +194,52 @@ class AuthService {
 
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
-    return !!token;
+    if (!token) return false;
+
+    // Check if token is expired by decoding the JWT payload
+    try {
+      const payload = this.decodeJwtPayload(token);
+      if (!payload || !payload.exp) {
+        // Token doesn't have expiration, assume valid
+        return true;
+      }
+
+      // Check if token is expired (exp is in seconds)
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (payload.exp < currentTime) {
+        // Token is expired, clear it and return false
+        console.warn('Token expired, clearing authentication');
+        await this.clearToken();
+        await this.clearUser();
+        await this.clearAccount();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error validating token:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Decode JWT payload without verification (for expiration check only)
+   * Returns null if token is invalid
+   */
+  private decodeJwtPayload(token: string): { exp?: number; iat?: number; [key: string]: any } | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+
+      // Base64 decode the payload (second part)
+      const payload = parts[1];
+      // Handle base64url encoding (replace - with + and _ with /)
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = atob(base64);
+      return JSON.parse(jsonPayload);
+    } catch {
+      return null;
+    }
   }
 
   async storeTenant(tenant: any): Promise<void> {

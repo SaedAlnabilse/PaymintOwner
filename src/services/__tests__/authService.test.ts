@@ -2,13 +2,21 @@
 import { authService } from '../authService';
 import { apiClient } from '../apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '../secureStorage';
 
 // Mock the dependencies
 jest.mock('../apiClient');
 jest.mock('@react-native-async-storage/async-storage');
+jest.mock('../secureStorage');
+jest.mock('../pushNotificationService', () => ({
+  pushNotificationService: {
+    sendPendingToken: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // Use jest.Mocked to get typed mocks
 const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
+const mockedSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 
 describe('AuthService', () => {
   afterEach(() => {
@@ -24,9 +32,12 @@ describe('AuthService', () => {
         access_token: 'fake-jwt-token',
         user: { id: '1', name: 'Test User', username: 'testuser', role: 'owner', employeeId: 'E1', email: 'test@test.com' },
       };
-      
+
       // Mock the API response
       mockedApiClient.post.mockResolvedValueOnce({ data: mockLoginResponse });
+
+      // Mock secureStorage
+      mockedSecureStorage.storeToken.mockResolvedValueOnce(undefined);
 
       // Act
       const result = await authService.login(credentials);
@@ -40,12 +51,13 @@ describe('AuthService', () => {
       });
       expect(mockedApiClient.post).toHaveBeenCalledTimes(1);
 
-      // 2. Check if token and user were stored in AsyncStorage
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith('@owner_access_token', mockLoginResponse.access_token);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith('@owner_user', JSON.stringify(mockLoginResponse.user));
-      expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2);
+      // 2. Check if token was stored via secureStorage
+      expect(mockedSecureStorage.storeToken).toHaveBeenCalledWith(mockLoginResponse.access_token);
 
-      // 3. Check if the result matches the mock response
+      // 3. Check if user was stored in AsyncStorage
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('@owner_user', JSON.stringify(mockLoginResponse.user));
+
+      // 4. Check if the result matches the mock response
       expect(result).toEqual(mockLoginResponse);
     });
 
@@ -53,7 +65,7 @@ describe('AuthService', () => {
       // Arrange
       const credentials = { username: 'wronguser', password: 'wrongpassword', tenantSlug: 'test-tenant' };
       const errorMessage = 'Invalid credentials';
-      
+
       // Mock the API to reject the request
       mockedApiClient.post.mockRejectedValueOnce(new Error(errorMessage));
 
@@ -61,7 +73,8 @@ describe('AuthService', () => {
       // 1. Expect the login promise to be rejected
       await expect(authService.login(credentials)).rejects.toThrow(errorMessage);
 
-      // 2. Ensure nothing was stored in AsyncStorage
+      // 2. Ensure nothing was stored
+      expect(mockedSecureStorage.storeToken).not.toHaveBeenCalled();
       expect(AsyncStorage.setItem).not.toHaveBeenCalled();
     });
   });
