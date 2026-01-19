@@ -14,6 +14,9 @@ import { setNotificationsEnabled } from '../store/slices/notificationsSlice';
 import StoreProfileModal from '../components/settings/StoreProfileModal';
 import AppearanceModal from '../components/settings/AppearanceModal';
 import ReceiptSettingsModal from '../components/settings/ReceiptSettingsModal';
+import LoyaltySettingsModal from '../components/settings/LoyaltySettingsModal';
+import SalesSettingsModal from '../components/settings/SalesSettingsModal';
+import DangerZoneModal from '../components/settings/DangerZoneModal';
 
 interface SettingItemProps {
   icon: string;
@@ -95,6 +98,9 @@ const SettingsScreen = () => {
   const [showStoreProfile, setShowStoreProfile] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
   const [showReceiptSettings, setShowReceiptSettings] = useState(false);
+  const [showLoyaltySettings, setShowLoyaltySettings] = useState(false);
+  const [showSalesSettings, setShowSalesSettings] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -206,6 +212,36 @@ const SettingsScreen = () => {
           </View>
         </View>
 
+        {/* Business Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderContainer}>
+            <Icon name="briefcase" size={18} color={COLORS.success} />
+            <Text style={[styles.sectionHeader, { color: COLORS.textPrimary }]}>Business</Text>
+          </View>
+          <View style={styles.sectionContent}>
+            <SettingItem
+              icon="star-circle-outline"
+              title="Loyalty Program"
+              subtitle="Points & Rewards"
+              iconColor={COLORS.warning}
+              iconBg={COLORS.containerGray}
+              onPress={() => setShowLoyaltySettings(true)}
+              styles={styles}
+              colors={COLORS}
+            />
+            <SettingItem
+              icon="cash-register"
+              title="Sales Settings"
+              subtitle="Tax Rate & Currency"
+              iconColor={COLORS.success}
+              iconBg={COLORS.containerGray}
+              onPress={() => setShowSalesSettings(true)}
+              styles={styles}
+              colors={COLORS}
+            />
+          </View>
+        </View>
+
         {/* Preferences Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
@@ -249,6 +285,26 @@ const SettingsScreen = () => {
 
         {/* Account section removed - logout available via drawer menu */}
 
+        {/* Danger Zone Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderContainer}>
+            <Icon name="alert-octagon" size={18} color={COLORS.error} />
+            <Text style={[styles.sectionHeader, { color: COLORS.textPrimary }]}>Danger Zone</Text>
+          </View>
+          <View style={[styles.sectionContent, { borderColor: COLORS.error + '30' }]}>
+            <SettingItem
+              icon="delete-forever"
+              title="Delete Establishment"
+              subtitle="Permanently delete all data"
+              iconColor={COLORS.error}
+              iconBg={COLORS.errorBg}
+              onPress={() => setShowDangerZone(true)}
+              styles={styles}
+              colors={COLORS}
+            />
+          </View>
+        </View>
+
         <View style={styles.versionContainer}>
           <Text style={[styles.version, { color: COLORS.textTertiary }]}>Version 1.0.0</Text>
           <Text style={[styles.buildNumber, { color: COLORS.textTertiary }]}>Build 45</Text>
@@ -272,6 +328,25 @@ const SettingsScreen = () => {
         onClose={() => setShowReceiptSettings(false)}
         settings={settings}
         onUpdate={fetchSettings}
+      />
+
+      <LoyaltySettingsModal
+        visible={showLoyaltySettings}
+        onClose={() => setShowLoyaltySettings(false)}
+        currency={settings?.currency || '$'}
+        onUpdate={fetchSettings}
+      />
+
+      <SalesSettingsModal
+        visible={showSalesSettings}
+        onClose={() => setShowSalesSettings(false)}
+        onUpdate={fetchSettings}
+      />
+
+      <DangerZoneModal
+        visible={showDangerZone}
+        onClose={() => setShowDangerZone(false)}
+        restaurantName={restaurantName}
       />
 
     </ScreenContainer>

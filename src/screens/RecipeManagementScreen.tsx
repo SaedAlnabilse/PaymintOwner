@@ -40,6 +40,52 @@ import { itemsService, Item } from '../services/itemsService';
 import ATMInput from '../components/common/ATMInput';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 
+const UNIT_CONVERSIONS: Record<string, { type: 'mass' | 'volume' | 'count'; factor: number }> = {
+  // Mass
+  kg: { type: 'mass', factor: 1000 },
+  g: { type: 'mass', factor: 1 },
+  mg: { type: 'mass', factor: 0.001 },
+  lb: { type: 'mass', factor: 453.592 },
+  oz: { type: 'mass', factor: 28.3495 },
+
+  // Volume
+  L: { type: 'volume', factor: 1000 },
+  dl: { type: 'volume', factor: 100 },
+  cl: { type: 'volume', factor: 10 },
+  ml: { type: 'volume', factor: 1 },
+  'fl oz': { type: 'volume', factor: 29.5735 },
+  gal: { type: 'volume', factor: 3785.41 },
+  pt: { type: 'volume', factor: 473.176 },
+  cup: { type: 'volume', factor: 236.588 },
+  tbsp: { type: 'volume', factor: 14.787 },
+  tsp: { type: 'volume', factor: 4.929 },
+
+  // Count
+  units: { type: 'count', factor: 1 },
+  pcs: { type: 'count', factor: 1 },
+  portion: { type: 'count', factor: 1 },
+};
+
+const getCompatibleUnits = (baseUnit: string) => {
+  const baseInfo = UNIT_CONVERSIONS[baseUnit];
+  if (!baseInfo) return [baseUnit];
+  return Object.keys(UNIT_CONVERSIONS).filter(u => UNIT_CONVERSIONS[u].type === baseInfo.type);
+};
+
+const convertToDisplay = (baseQty: number, baseUnit: string, targetUnit: string) => {
+  const baseInfo = UNIT_CONVERSIONS[baseUnit];
+  const targetInfo = UNIT_CONVERSIONS[targetUnit];
+  if (!baseInfo || !targetInfo || baseInfo.type !== targetInfo.type) return baseQty;
+  return (baseQty * baseInfo.factor) / targetInfo.factor;
+};
+
+const convertToBase = (displayQty: number, baseUnit: string, displayUnit: string) => {
+  const baseInfo = UNIT_CONVERSIONS[baseUnit];
+  const displayInfo = UNIT_CONVERSIONS[displayUnit];
+  if (!baseInfo || !displayInfo || baseInfo.type !== displayInfo.type) return displayQty;
+  return (displayQty * displayInfo.factor) / baseInfo.factor;
+};
+
 const RecipeManagementScreen: React.FC = () => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
@@ -71,6 +117,7 @@ const RecipeManagementScreen: React.FC = () => {
   const [finalRecipeIngredients, setFinalRecipeIngredients] = useState<RecipeIngredient[]>([]);
   const [showMenuItemPicker, setShowMenuItemPicker] = useState(false);
   const [showIngredientPicker, setShowIngredientPicker] = useState(false);
+  const [pickingUnitIndex, setPickingUnitIndex] = useState<number | null>(null);
 
   // Confirmation states
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -224,16 +271,60 @@ const RecipeManagementScreen: React.FC = () => {
       // Final recipe
       const menuItem = menuItems.find(m => m.id === recipe.menuItemId);
       setSelectedMenuItem(menuItem || { id: recipe.menuItemId, name: recipe.menuItemName } as Item);
-      setFinalRecipeIngredients([...recipe.ingredients]);
+
+      const mappedIngredients = recipe.ingredients.map(ing => {
+        // Determine base unit - try to find source raw material/sub recipe
+        // In this simplified view, we might assume ing.unit is the base unit stored, 
+        // or we check rawMaterials/subRecipes lists.
+        const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+        const subRec = subRecipes.find(sr => sr.id === ing.ingredientId);
+        const baseUnit = rawMat?.unit || subRec?.yieldUnit || ing.unit || 'units';
+
+        // Smart loading logic
+        let displayUnit = baseUnit;
+        if (baseUnit === 'L' && ing.quantity < 1) displayUnit = 'ml';
+        else if (baseUnit === 'kg' && ing.quantity < 1) displayUnit = 'g';
+        else if (baseUnit === 'g' && ing.quantity < 1) displayUnit = 'mg';
+
+        const displayQty = convertToDisplay(ing.quantity, baseUnit, displayUnit);
+
+        return {
+          ...ing,
+          quantity: Number(displayQty.toFixed(4)),
+          unit: displayUnit
+        };
+      });
+
+      setFinalRecipeIngredients(mappedIngredients);
     } else {
       // Sub recipe
       setSubRecipeName(recipe.name);
       setSubRecipeYield(recipe.yield);
       setSubRecipeYieldUnit(recipe.yieldUnit);
-      setSubRecipeIngredients([...recipe.ingredients]);
+
+      const mappedIngredients = recipe.ingredients.map(ing => {
+        const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+        const baseUnit = rawMat?.unit || ing.unit || 'units';
+
+        // Smart loading logic
+        let displayUnit = baseUnit;
+        if (baseUnit === 'L' && ing.quantity < 1) displayUnit = 'ml';
+        else if (baseUnit === 'kg' && ing.quantity < 1) displayUnit = 'g';
+        else if (baseUnit === 'g' && ing.quantity < 1) displayUnit = 'mg';
+
+        const displayQty = convertToDisplay(ing.quantity, baseUnit, displayUnit);
+
+        return {
+          ...ing,
+          quantity: Number(displayQty.toFixed(4)),
+          unit: displayUnit
+        };
+      });
+
+      setSubRecipeIngredients(mappedIngredients);
     }
     setModalVisible(true);
-  }, [menuItems]);
+  }, [menuItems, rawMaterials, subRecipes]);
 
   const handleSaveSubRecipe = useCallback(async () => {
     setTouched({
@@ -247,10 +338,17 @@ const RecipeManagementScreen: React.FC = () => {
       return;
     }
 
-    const apiIngredients = subRecipeIngredients.map(ing => ({
-      rawMaterialId: ing.ingredientId,
-      quantity: ing.quantity,
-    }));
+    const apiIngredients = subRecipeIngredients.map(ing => {
+      const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+      const baseUnit = rawMat?.unit || 'units'; // Fallback
+      // ing.quantity is in ing.unit (display unit). Convert to base unit.
+      const baseQty = convertToBase(ing.quantity, baseUnit, ing.unit);
+
+      return {
+        rawMaterialId: ing.ingredientId,
+        quantity: baseQty,
+      };
+    });
 
     try {
       if (editingRecipe) {
@@ -286,6 +384,7 @@ const RecipeManagementScreen: React.FC = () => {
     subRecipeIngredients,
     resetForm,
     validateSubRecipeForm,
+    rawMaterials
   ]);
 
   const handleSaveFinalRecipe = useCallback(async () => {
@@ -300,9 +399,21 @@ const RecipeManagementScreen: React.FC = () => {
 
     const apiIngredients = finalRecipeIngredients.map(ing => {
       const isSubRecipe = subRecipes.some(sr => sr.id === ing.ingredientId);
+      let baseUnit = 'units';
+
+      if (isSubRecipe) {
+        const subRec = subRecipes.find(sr => sr.id === ing.ingredientId);
+        baseUnit = subRec?.yieldUnit || 'units';
+      } else {
+        const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+        baseUnit = rawMat?.unit || 'units';
+      }
+
+      const baseQty = convertToBase(ing.quantity, baseUnit, ing.unit);
+
       return isSubRecipe
-        ? { subRecipeId: ing.ingredientId, quantity: ing.quantity }
-        : { rawMaterialId: ing.ingredientId, quantity: ing.quantity };
+        ? { subRecipeId: ing.ingredientId, quantity: baseQty }
+        : { rawMaterialId: ing.ingredientId, quantity: baseQty };
     });
 
     try {
@@ -331,6 +442,7 @@ const RecipeManagementScreen: React.FC = () => {
     selectedMenuItem,
     finalRecipeIngredients,
     subRecipes,
+    rawMaterials,
     resetForm,
     validateFinalRecipeForm,
   ]);
@@ -400,6 +512,47 @@ const RecipeManagementScreen: React.FC = () => {
     [activeTab]
   );
 
+  // ... inside RecipeManagementScreen
+
+  const updateIngredientUnit = useCallback((index: number, newUnit: string) => {
+    const list = activeTab === 'sub' ? subRecipeIngredients : finalRecipeIngredients;
+    const ing = list[index];
+
+    // Find base unit to perform conversion
+    let baseUnit = 'units';
+    if (activeTab === 'sub') {
+      const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+      baseUnit = rawMat?.unit || 'units';
+    } else {
+      const isSubRecipe = subRecipes.some(sr => sr.id === ing.ingredientId);
+      if (isSubRecipe) {
+        const subRec = subRecipes.find(sr => sr.id === ing.ingredientId);
+        baseUnit = subRec?.yieldUnit || 'units';
+      } else {
+        const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+        baseUnit = rawMat?.unit || 'units';
+      }
+    }
+
+    // Convert: Current(Display) -> Base -> New(Display)
+    // 1. Convert current display qty to base
+    const baseQty = convertToBase(ing.quantity, baseUnit, ing.unit);
+    // 2. Convert base to new display unit
+    const newDisplayQty = convertToDisplay(baseQty, baseUnit, newUnit);
+
+    const updatedIng = { ...ing, unit: newUnit, quantity: Number(newDisplayQty.toFixed(4)) };
+
+    if (activeTab === 'sub') {
+      setSubRecipeIngredients(prev => prev.map((item, i) => i === index ? updatedIng : item));
+    } else {
+      setFinalRecipeIngredients(prev => prev.map((item, i) => i === index ? updatedIng : item));
+    }
+  }, [activeTab, subRecipeIngredients, finalRecipeIngredients, rawMaterials, subRecipes]);
+
+  const handleIngredientUnitPress = useCallback((index: number) => {
+    setPickingUnitIndex(index);
+  }, []);
+
   const availableIngredients = useMemo(() => {
     if (activeTab === 'sub') {
       return rawMaterials.map(m => ({ id: m.id, name: m.name, unit: m.unit }));
@@ -452,16 +605,35 @@ const RecipeManagementScreen: React.FC = () => {
           <Text style={[styles.ingredientsTitle, { color: COLORS.textSecondary }]}>
             Ingredients:
           </Text>
-          {ingredients.map((ing, index) => (
-            <View key={index} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientName, { color: COLORS.textPrimary }]}>
-                {ing.ingredientName}
-              </Text>
-              <Text style={[styles.ingredientQty, { color: COLORS.textSecondary }]}>
-                {ing.quantity} {ing.unit}
-              </Text>
-            </View>
-          ))}
+          {ingredients.map((ing, index) => {
+            const isSub = subRecipes.some(sr => sr.id === ing.ingredientId);
+            let baseUnit = 'units';
+            if (isSub) {
+              const sr = subRecipes.find(s => s.id === ing.ingredientId);
+              baseUnit = sr?.yieldUnit || ing.unit || 'units';
+            } else {
+              const rm = rawMaterials.find(r => r.id === ing.ingredientId);
+              baseUnit = rm?.unit || ing.unit || 'units';
+            }
+
+            let displayUnit = baseUnit;
+            if (baseUnit === 'L' && ing.quantity < 1) displayUnit = 'ml';
+            else if (baseUnit === 'kg' && ing.quantity < 1) displayUnit = 'g';
+            else if (baseUnit === 'g' && ing.quantity < 1) displayUnit = 'mg';
+
+            const displayQty = convertToDisplay(ing.quantity, baseUnit, displayUnit);
+
+            return (
+              <View key={index} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientName, { color: COLORS.textPrimary }]}>
+                  {ing.ingredientName}
+                </Text>
+                <Text style={[styles.ingredientQty, { color: COLORS.textSecondary }]}>
+                  {Number(displayQty.toFixed(4))} {displayUnit}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       </View>
     );
@@ -715,9 +887,27 @@ const RecipeManagementScreen: React.FC = () => {
                           <Text style={[styles.ingredientFormName, { color: COLORS.textPrimary }]} numberOfLines={1}>
                             {ing.ingredientName}
                           </Text>
-                          <Text style={[styles.ingredientFormUnit, { color: COLORS.textSecondary, fontSize: 11 }]}>
-                            Unit: {ing.unit}
-                          </Text>
+                          <TouchableOpacity
+                            style={{
+                              height: 44,
+                              minWidth: 70,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: COLORS.borderLight,
+                              backgroundColor: COLORS.background,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingHorizontal: 8,
+                              marginLeft: 8,
+                            }}
+                            onPress={() => handleIngredientUnitPress(index)}
+                          >
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.textPrimary }}>
+                              {ing.unit}
+                            </Text>
+                            <Icon name="chevron-down" size={14} color={COLORS.textSecondary} />
+                          </TouchableOpacity>
                         </View>
                         <View style={{ flex: 1, marginRight: 10 }}>
                           <ATMInput
@@ -847,6 +1037,72 @@ const RecipeManagementScreen: React.FC = () => {
         onCancel={() => setConfirmVisible(false)}
         confirmColor={confirmColor}
       />
+
+      {/* Unit Picker Modal */}
+      <Modal visible={pickingUnitIndex !== null} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setPickingUnitIndex(null)} />
+          <View style={[styles.modalContent, { backgroundColor: COLORS.white, margin: 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>
+                Select Unit
+              </Text>
+              <TouchableOpacity onPress={() => setPickingUnitIndex(null)}>
+                <Icon name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {(() => {
+                if (pickingUnitIndex === null) return null;
+                const list = activeTab === 'sub' ? subRecipeIngredients : finalRecipeIngredients;
+                const ing = list[pickingUnitIndex];
+                if (!ing) return null;
+
+                let baseUnit = 'units';
+                if (activeTab === 'sub') {
+                  const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+                  baseUnit = rawMat?.unit || 'units';
+                } else {
+                  const isSubRecipe = subRecipes.some(sr => sr.id === ing.ingredientId);
+                  if (isSubRecipe) {
+                    const subRec = subRecipes.find(sr => sr.id === ing.ingredientId);
+                    baseUnit = subRec?.yieldUnit || 'units';
+                  } else {
+                    const rawMat = rawMaterials.find(rm => rm.id === ing.ingredientId);
+                    baseUnit = rawMat?.unit || 'units';
+                  }
+                }
+
+                const options = getCompatibleUnits(baseUnit);
+
+                return options.map(u => (
+                  <TouchableOpacity
+                    key={u}
+                    style={{
+                      padding: 16,
+                      borderBottomWidth: 1,
+                      borderBottomColor: COLORS.borderLight,
+                      backgroundColor: u === ing.unit ? COLORS.primary + '10' : 'transparent',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                    onPress={() => {
+                      updateIngredientUnit(pickingUnitIndex, u);
+                      setPickingUnitIndex(null);
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, color: u === ing.unit ? COLORS.primary : COLORS.textPrimary, fontWeight: u === ing.unit ? '700' : '400' }}>
+                      {u}
+                    </Text>
+                    {u === ing.unit && <Icon name="check" size={20} color={COLORS.primary} />}
+                  </TouchableOpacity>
+                ));
+              })()}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 };

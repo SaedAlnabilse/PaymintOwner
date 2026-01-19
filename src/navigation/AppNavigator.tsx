@@ -44,6 +44,7 @@ import MergeEstablishmentsScreen from '../screens/MergeEstablishmentsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
+import OwnerEmployeesScreen from '../screens/OwnerEmployeesScreen';
 
 import { RootState, AppDispatch } from '../store/store';
 import { checkAuthStatus } from '../store/slices/authSlice';
@@ -297,6 +298,16 @@ const DrawerNavigator = () => {
             <Icon name="view-dashboard" size={22} color={color} />
           ),
           title: 'Owner Overview'
+        }}
+      />
+      <Drawer.Screen
+        name="OwnerEmployees"
+        component={OwnerEmployeesScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="account-multiple-check" size={22} color={color} />
+          ),
+          title: 'Global Workforce'
         }}
       />
       <Drawer.Screen

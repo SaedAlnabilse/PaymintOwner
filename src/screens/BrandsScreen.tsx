@@ -18,6 +18,7 @@ import ScreenContainer from '../components/common/ScreenContainer';
 import { RootState } from '../store/store';
 import { apiClient } from '../services/apiClient';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import CreateBrandModal from '../components/brands/CreateBrandModal';
 
 interface Brand {
   id: string;
@@ -44,9 +45,9 @@ const BrandsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null);
 
   // Form state
-  const [newBrandName, setNewBrandName] = useState('');
-  const [newBrandDesc, setNewBrandDesc] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  
+  
 
   useEffect(() => {
     fetchBrands();
@@ -82,29 +83,6 @@ const BrandsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     setRefreshing(true);
     fetchBrands();
   }, []);
-
-  const handleCreateBrand = async () => {
-    if (!newBrandName.trim()) {
-      Alert.alert('Error', 'Please enter a brand name');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      await apiClient.post('/api/brands', {
-        name: newBrandName.trim(),
-        description: newBrandDesc.trim(),
-      });
-      setShowCreateModal(false);
-      setNewBrandName('');
-      setNewBrandDesc('');
-      fetchBrands();
-    } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to create brand');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const confirmDelete = (brand: Brand) => {
     setDeleteTarget(brand);
@@ -306,70 +284,13 @@ const BrandsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           />
         )}
 
-        {/* Create Brand Modal */}
-        {showCreateModal && (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: COLORS.cardBackground }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>Create Brand</Text>
-                <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                  <Icon name="close" size={24} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              </View>
 
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Brand Name</Text>
-                <TextInput
-                  style={[
-                    styles.formInput,
-                    { backgroundColor: COLORS.backgroundSecondary, color: COLORS.textPrimary },
-                  ]}
-                  value={newBrandName}
-                  onChangeText={setNewBrandName}
-                  placeholder="e.g., Coffee House"
-                  placeholderTextColor={COLORS.textSecondary}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Description</Text>
-                <TextInput
-                  style={[
-                    styles.formInputMulti,
-                    { backgroundColor: COLORS.backgroundSecondary, color: COLORS.textPrimary },
-                  ]}
-                  value={newBrandDesc}
-                  onChangeText={setNewBrandDesc}
-                  placeholder="Brief description of the brand..."
-                  placeholderTextColor={COLORS.textSecondary}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.cancelBtn, { borderColor: COLORS.border }]}
-                  onPress={() => setShowCreateModal(false)}
-                >
-                  <Text style={[styles.cancelBtnText, { color: COLORS.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
-                  onPress={handleCreateBrand}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#000" />
-                  ) : (
-                    <Text style={styles.submitBtnText}>Create Brand</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
+        {/* Create Brand Modal - Full wizard with establishment and employee selection */}
+        <CreateBrandModal
+          visible={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={fetchBrands}
+        />
 
         {/* Delete Confirmation */}
         <ConfirmationModal

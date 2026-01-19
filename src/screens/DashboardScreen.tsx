@@ -19,6 +19,8 @@ import SalesTrendChart from '../components/dashboard/SalesTrendChart';
 import TopEmployeesCard from '../components/dashboard/TopEmployeesCard';
 import RecentOrdersFeed from '../components/dashboard/RecentOrdersFeed';
 import OrderDetailsModal from '../components/reports/OrderDetailsModal';
+import PeakHoursChart from '../components/dashboard/PeakHoursChart';
+import PaymentBreakdownChart from '../components/dashboard/PaymentBreakdownChart';
 
 const DashboardScreen = () => {
   const { isDarkMode } = useTheme();
@@ -590,6 +592,31 @@ const DashboardScreen = () => {
                   <Text style={styles.statLabel}>Card Sales</Text>
                   <Text style={styles.statValue}>{formatCurrency(metrics.cardSales || 0)}</Text>
                 </View>
+
+                {/* Refunds Card - Only show if there are refunds */}
+                {comparison && comparison.current.refunds > 0 && (
+                  <View style={[styles.statCard, { borderLeftColor: COLORS.error }]}>
+                    <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : COLORS.errorBg }]}>
+                      <Icon name="cash-refund" size={24} color={COLORS.error} />
+                    </View>
+                    <Text style={styles.statLabel}>Refunds</Text>
+                    <Text style={[styles.statValue, { color: COLORS.error }]}>{formatCurrency(comparison.current.refunds)}</Text>
+                  </View>
+                )}
+
+                {/* Pay In/Out Summary - Only show if there's activity */}
+                {comparison && (comparison.current.payIn > 0 || comparison.current.payOut > 0) && (
+                  <View style={[styles.statCard, { borderLeftColor: COLORS.blue }]}>
+                    <View style={[styles.statIcon, { backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.15)' : COLORS.containerGray }]}>
+                      <Icon name="swap-horizontal" size={24} color={COLORS.blue} />
+                    </View>
+                    <Text style={styles.statLabel}>Pay In/Out</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={[styles.statValueSmall, { color: COLORS.primary }]}>+{formatCurrency(comparison.current.payIn).split(' ')[0]}</Text>
+                      <Text style={[styles.statValueSmall, { color: COLORS.error }]}>-{formatCurrency(comparison.current.payOut).split(' ')[0]}</Text>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Sales by Category */}
@@ -629,6 +656,24 @@ const DashboardScreen = () => {
                 <SalesTrendChart
                   data={hourlySales}
                   title={`${periodOptions.find(p => p.key === selectedPeriod)?.label}'s Sales Trend`}
+                />
+              )}
+
+              {/* Peak Hours Chart */}
+              {(selectedPeriod === 'today' || selectedPeriod === 'yesterday') && hourlySales.length > 0 && (
+                <PeakHoursChart
+                  data={hourlySales}
+                  title="Peak Hours"
+                />
+              )}
+
+              {/* Payment Methods Breakdown */}
+              {selectedPeriod === 'today' && (metrics.cashSales > 0 || metrics.cardSales > 0 || metrics.otherPayments > 0) && (
+                <PaymentBreakdownChart
+                  cashSales={metrics.cashSales || 0}
+                  cardSales={metrics.cardSales || 0}
+                  otherSales={metrics.otherPayments || 0}
+                  title="Payment Methods"
                 />
               )}
 
@@ -968,6 +1013,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     color: colors.textPrimary,
+  },
+  statValueSmall: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   section: {
     backgroundColor: colors.surface,

@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../context/ThemeContext';
@@ -98,6 +99,20 @@ const DiscountsScreen: React.FC = () => {
     }
   };
 
+  const toggleAdminOnly = async (discount: Discount) => {
+    try {
+      await salesSettingsService.updateDiscount(
+        discount.id,
+        discount.name,
+        discount.percentage,
+        !discount.adminOnly
+      );
+      fetchDiscounts();
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update discount');
+    }
+  };
+
   const stats = {
     total: discounts.length,
     active: discounts.length,  // All discounts are considered active
@@ -135,11 +150,23 @@ const DiscountsScreen: React.FC = () => {
         <View style={[styles.badge, { backgroundColor: COLORS.backgroundSecondary }]}>
           <Text style={[styles.badgeText, { color: COLORS.textSecondary }]}>Percentage</Text>
         </View>
-        {item.adminOnly && (
-          <View style={[styles.badge, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
-            <Text style={[styles.badgeText, { color: '#D97706' }]}>Manager Only</Text>
-          </View>
-        )}
+      </View>
+
+      {/* Admin Only Toggle */}
+      <View style={[styles.adminToggleRow, { borderTopColor: COLORS.border }]}>
+        <View style={styles.adminToggleLeft}>
+          <Icon name="shield-lock-outline" size={16} color={item.adminOnly ? '#D97706' : COLORS.textTertiary} />
+          <Text style={[styles.adminToggleLabel, { color: item.adminOnly ? '#D97706' : COLORS.textSecondary }]}>
+            Manager Only
+          </Text>
+        </View>
+        <Switch
+          value={item.adminOnly || false}
+          onValueChange={() => toggleAdminOnly(item)}
+          trackColor={{ false: COLORS.border, true: '#FCD34D' }}
+          thumbColor={item.adminOnly ? '#D97706' : '#FFF'}
+          style={styles.adminSwitch}
+        />
       </View>
     </View>
   );
@@ -411,6 +438,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  adminToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  adminToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  adminToggleLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  adminSwitch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
   loadingContainer: {
     flex: 1,

@@ -144,7 +144,7 @@ const getDefaultStaffOverview = (): StaffOverview => ({
  */
 export const getOwnerDashboard = async (retryCount = 0): Promise<OwnerDashboard> => {
   try {
-    const response = await apiClient.get('/reports/owner-dashboard');
+    const response = await apiClient.get('/api/dashboard/owner-dashboard');
     return response.data;
   } catch (error: any) {
     if (error?.response?.status === 429 && retryCount < 3) {
@@ -163,7 +163,7 @@ export const getOwnerDashboard = async (retryCount = 0): Promise<OwnerDashboard>
  */
 export const getStaffOverview = async (retryCount = 0): Promise<StaffOverview> => {
   try {
-    const response = await apiClient.get('/reports/staff-overview');
+    const response = await apiClient.get('/api/dashboard/staff-overview');
     return response.data;
   } catch (error: any) {
     if (error?.response?.status === 429 && retryCount < 3) {
@@ -181,7 +181,7 @@ export const getStaffOverview = async (retryCount = 0): Promise<StaffOverview> =
  */
 export const getDashboardSummary = async (retryCount = 0): Promise<DashboardSummary> => {
   try {
-    const response = await apiClient.get('/reports/live-shift');
+    const response = await apiClient.get('/api/dashboard/live-shift');
     return response.data;
   } catch (error: any) {
     if (error?.response?.status === 429 && retryCount < 3) {

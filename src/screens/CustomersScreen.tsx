@@ -62,6 +62,12 @@ const CustomersScreen = () => {
   const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string }>({});
   const [saving, setSaving] = useState(false);
 
+  // Points adjustment state
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsAmount, setPointsAmount] = useState('');
+  const [pointsOperation, setPointsOperation] = useState<'add' | 'deduct'>('add');
+  const [isAdjustingPoints, setIsAdjustingPoints] = useState(false);
+
   // Fetch customers
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
@@ -200,6 +206,43 @@ const CustomersScreen = () => {
         return '#6B7280';
       default:
         return '#CD7F32';
+    }
+  };
+
+  // Handle points adjustment
+  const handlePointsAdjustment = async () => {
+    if (!selectedCustomer || !pointsAmount) return;
+
+    const amount = parseInt(pointsAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Please enter a valid points amount');
+      return;
+    }
+
+    const finalAmount = pointsOperation === 'add' ? amount : -amount;
+
+    // Check if deducting would go negative
+    if (pointsOperation === 'deduct' && amount > selectedCustomer.points) {
+      Alert.alert('Error', `Customer only has ${selectedCustomer.points} points available`);
+      return;
+    }
+
+    setIsAdjustingPoints(true);
+    try {
+      const updatedCustomer = await updateCustomerPoints(selectedCustomer.id, finalAmount);
+      setSelectedCustomer(updatedCustomer);
+      Alert.alert(
+        'Success',
+        `${pointsOperation === 'add' ? 'Added' : 'Deducted'} ${amount} points ${pointsOperation === 'add' ? 'to' : 'from'} ${selectedCustomer.name}`
+      );
+      setShowPointsModal(false);
+      setPointsAmount('');
+      setPointsOperation('add');
+      fetchData(true); // Refresh the list
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to adjust points');
+    } finally {
+      setIsAdjustingPoints(false);
     }
   };
 
@@ -428,6 +471,14 @@ const CustomersScreen = () => {
 
                 </View>
 
+                {/* Points Adjustment Button */}
+                <TouchableOpacity
+                  style={[styles.adjustPointsButton, { backgroundColor: COLORS.primary + '15' }]}
+                  onPress={() => setShowPointsModal(true)}
+                >
+                  <Icon name="star-plus" size={20} color={COLORS.primary} />
+                  <Text style={[styles.adjustPointsButtonText, { color: COLORS.primary }]}>Adjust Points</Text>
+                </TouchableOpacity>
 
 
                 {/* Order History */}
@@ -687,6 +738,99 @@ const CustomersScreen = () => {
 
 
       <CustomerDetailModal />
+
+      {/* Points Adjustment Modal */}
+      <Modal
+        visible={showPointsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPointsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setShowPointsModal(false)} />
+          <View style={[styles.pointsModalContent, { backgroundColor: COLORS.cardBackground }]}>
+            <View style={styles.pointsModalHeader}>
+              <Icon name="star-circle" size={40} color={COLORS.primary} />
+              <Text style={[styles.pointsModalTitle, { color: COLORS.textPrimary }]}>
+                Adjust Loyalty Points
+              </Text>
+              <Text style={[styles.pointsModalSubtitle, { color: COLORS.textSecondary }]}>
+                {selectedCustomer?.name} • Current: {selectedCustomer?.points || 0} points
+              </Text>
+            </View>
+
+            <View style={styles.pointsOperationContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.pointsOperationButton,
+                  pointsOperation === 'add' && { backgroundColor: COLORS.successBg, borderColor: COLORS.primary },
+                  { borderColor: COLORS.border }
+                ]}
+                onPress={() => setPointsOperation('add')}
+              >
+                <Icon name="plus-circle" size={24} color={pointsOperation === 'add' ? COLORS.primary : COLORS.textSecondary} />
+                <Text style={[
+                  styles.pointsOperationText,
+                  { color: pointsOperation === 'add' ? COLORS.primary : COLORS.textSecondary }
+                ]}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.pointsOperationButton,
+                  pointsOperation === 'deduct' && { backgroundColor: COLORS.errorBg, borderColor: COLORS.error },
+                  { borderColor: COLORS.border }
+                ]}
+                onPress={() => setPointsOperation('deduct')}
+              >
+                <Icon name="minus-circle" size={24} color={pointsOperation === 'deduct' ? COLORS.error : COLORS.textSecondary} />
+                <Text style={[
+                  styles.pointsOperationText,
+                  { color: pointsOperation === 'deduct' ? COLORS.error : COLORS.textSecondary }
+                ]}>Deduct</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[styles.pointsInput, { backgroundColor: COLORS.background, borderColor: COLORS.border, color: COLORS.textPrimary }]}
+              placeholder="Enter points amount"
+              placeholderTextColor={COLORS.textTertiary}
+              value={pointsAmount}
+              onChangeText={setPointsAmount}
+              keyboardType="number-pad"
+            />
+
+            <View style={styles.pointsModalActions}>
+              <TouchableOpacity
+                style={[styles.pointsCancelButton, { backgroundColor: COLORS.background }]}
+                onPress={() => {
+                  setShowPointsModal(false);
+                  setPointsAmount('');
+                  setPointsOperation('add');
+                }}
+              >
+                <Text style={[styles.pointsCancelText, { color: COLORS.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.pointsConfirmButton,
+                  { backgroundColor: pointsOperation === 'add' ? COLORS.primary : COLORS.error },
+                  (!pointsAmount || isAdjustingPoints) && { opacity: 0.5 }
+                ]}
+                onPress={handlePointsAdjustment}
+                disabled={!pointsAmount || isAdjustingPoints}
+              >
+                {isAdjustingPoints ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.pointsConfirmText}>
+                    {pointsOperation === 'add' ? 'Add Points' : 'Deduct Points'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <CustomerFormModal
         visible={editModalVisible}
@@ -1459,6 +1603,102 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   },
 
+  // Points adjustment button styles
+  adjustPointsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  adjustPointsButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  // Points Modal styles
+  pointsModalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  pointsModalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  pointsModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  pointsModalSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  pointsOperationContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  pointsOperationButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  pointsOperationText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  pointsInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  pointsModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pointsCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pointsCancelText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  pointsConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pointsConfirmText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
 });
 
 export default CustomersScreen;

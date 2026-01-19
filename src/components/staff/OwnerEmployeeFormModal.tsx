@@ -16,27 +16,28 @@ import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getColors } from '../../constants/colors';
-import { CreateUserDto, UpdateUserDto } from '../../services/users';
-import { Discount } from '../../types/salesManagement';
 
-interface StaffMember {
+interface Establishment {
     id: string;
+    name: string;
+}
+
+interface OwnerEmployeeFormData {
+    id?: string;
     name: string;
     username: string;
     role: string;
     email?: string;
-    employeeId?: string;
     permissions?: string[];
-    allowedDiscounts?: string[];
+    establishmentIds?: string[];
 }
 
-interface EmployeeFormModalProps {
+interface OwnerEmployeeFormModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (data: CreateUserDto | UpdateUserDto) => Promise<void>;
-    onDelete?: (id: string) => Promise<void>;
-    initialData?: StaffMember | null;
-    availableDiscounts?: Discount[];
+    onSubmit: (data: any) => Promise<void>;
+    initialData?: OwnerEmployeeFormData | null;
+    establishments: Establishment[];
 }
 
 const AVAILABLE_PERMISSIONS = [
@@ -50,13 +51,12 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'employees', label: 'Manage Employees', description: 'Add/Edit users' },
 ];
 
-const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
+const OwnerEmployeeFormModal: React.FC<OwnerEmployeeFormModalProps> = ({
     visible,
     onClose,
     onSubmit,
-    onDelete,
     initialData,
-    availableDiscounts = []
+    establishments
 }) => {
     const { isDarkMode } = useTheme();
     const COLORS = getColors(isDarkMode);
@@ -69,19 +69,13 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [permissions, setPermissions] = useState<string[]>([]);
+    const [selectedEstablishmentIds, setSelectedEstablishmentIds] = useState<string[]>([]);
+    const [establishmentSearch, setEstablishmentSearch] = useState('');
 
     const [loading, setLoading] = useState(false);
-    const [showPermissionsDropdown, setShowPermissionsDropdown] = useState(true);
-    const [showDiscountsDropdown, setShowDiscountsDropdown] = useState(false);
-
-    // Permission & Discount State
-    const [permissions, setPermissions] = useState<string[]>([]);
-    const [allowedDiscounts, setAllowedDiscounts] = useState<string[]>([]);
-    const [allDiscountsSelected, setAllDiscountsSelected] = useState(true);
-
-    const discountsForUser = role === 'ADMIN'
-        ? availableDiscounts
-        : availableDiscounts.filter(d => !d.adminOnly);
+    const [showPermissionsDropdown, setShowPermissionsDropdown] = useState(false);
+    const [showEstablishmentDropdown, setShowEstablishmentDropdown] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -92,17 +86,14 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 setRole(initialData.role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER');
                 setPassword('');
                 setConfirmPassword('');
-
-                // Initialize Permissions
                 setPermissions(initialData.permissions || ['pos', 'discounts', 'refunds']);
-
-                // Initialize Discounts
-                if (initialData.allowedDiscounts && initialData.allowedDiscounts.length > 0) {
-                    setAllDiscountsSelected(false);
-                    setAllowedDiscounts(initialData.allowedDiscounts);
+                
+                if (initialData.establishmentIds && initialData.establishmentIds.length > 0) {
+                    setSelectedEstablishmentIds(initialData.establishmentIds);
+                } else if (establishments.length === 1) {
+                    setSelectedEstablishmentIds([establishments[0].id]);
                 } else {
-                    setAllDiscountsSelected(true);
-                    setAllowedDiscounts([]);
+                    setSelectedEstablishmentIds([]);
                 }
             } else {
                 setName('');
@@ -112,12 +103,19 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 setPassword('');
                 setConfirmPassword('');
                 setPermissions(['pos', 'discounts', 'refunds']);
-                setAllDiscountsSelected(true);
-                setAllowedDiscounts([]);
+                
+                if (establishments.length === 1) {
+                    setSelectedEstablishmentIds([establishments[0].id]);
+                } else {
+                    setSelectedEstablishmentIds([]);
+                }
             }
             setLoading(false);
+            setShowPermissionsDropdown(false);
+            setShowEstablishmentDropdown(false);
+            setEstablishmentSearch('');
         }
-    }, [visible, initialData]);
+    }, [visible, initialData, establishments]);
 
     const togglePermission = (permissionId: string) => {
         setPermissions(prev => {
@@ -129,31 +127,30 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             if (!isRemoving && (permissionId === 'discounts' || permissionId === 'refunds')) {
                 if (!newPermissions.includes('pos')) newPermissions.push('pos');
             }
-            if (isRemoving && (permissionId === 'discounts' || permissionId === 'refunds')) {
-                if (!newPermissions.includes('discounts') && !newPermissions.includes('refunds')) {
-                    // newPermissions = newPermissions.filter(id => id !== 'pos'); // Optional: force keep POS
-                }
-            }
             return newPermissions;
         });
     };
 
-    const toggleDiscount = (discountId: string) => {
-        setAllowedDiscounts(prev =>
-            prev.includes(discountId)
-                ? prev.filter(id => id !== discountId)
-                : [...prev, discountId]
+    const toggleEstablishment = (establishmentId: string) => {
+        setSelectedEstablishmentIds(prev =>
+            prev.includes(establishmentId)
+                ? prev.filter(id => id !== establishmentId)
+                : [...prev, establishmentId]
         );
     };
 
-    const handleAllDiscountsToggle = (value: boolean) => {
-        setAllDiscountsSelected(value);
-        if (value) setAllowedDiscounts([]);
-    };
+    const filteredEstablishments = establishments.filter(est =>
+        est.name.toLowerCase().includes(establishmentSearch.toLowerCase())
+    );
 
     const handleSubmit = async () => {
-        if (!name || !username || !role) {
-            Alert.alert('Error', 'Please fill in Name, Username and Role');
+        if (!name || !username) {
+            Alert.alert('Error', 'Please fill in Name and Username');
+            return;
+        }
+
+        if (role === 'ADMIN' && !email) {
+            Alert.alert('Error', 'Email is required for Admin users');
             return;
         }
 
@@ -172,16 +169,25 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             return;
         }
 
+        if (selectedEstablishmentIds.length === 0) {
+            Alert.alert('Error', 'Please select at least one establishment');
+            return;
+        }
+
         setLoading(true);
         try {
+            const nameParts = name.trim().split(/\s+/);
+            const firstName = nameParts[0] || 'Staff';
+            const lastName = nameParts.slice(1).join(' ');
+
             const payload: any = {
-                name: name.trim(),
+                firstName,
+                ...(lastName && { lastName }),
                 username: username.trim(),
-                employeeId: initialData?.employeeId || `EMP${Date.now().toString().slice(-6)}`, // Keep ID for backend but hide from UI
                 email: email.trim() || undefined,
                 role: role.toUpperCase(),
                 permissions: role === 'ADMIN' ? AVAILABLE_PERMISSIONS.map(p => p.id) : permissions,
-                allowedDiscounts: allDiscountsSelected ? [] : allowedDiscounts,
+                establishmentIds: selectedEstablishmentIds,
             };
 
             if (password) {
@@ -189,45 +195,17 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             }
 
             if (!initialData) {
-                // New employee: random 4-digit PIN as per main app pattern
                 payload.pinCode = Math.floor(1000 + Math.random() * 9000).toString();
             }
 
             await onSubmit(payload);
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            Alert.alert('Error', 'Failed to save employee');
+            Alert.alert('Error', error.response?.data?.message || 'Failed to save employee');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleDelete = () => {
-        if (!initialData?.id || !onDelete) return;
-
-        Alert.alert(
-            'Delete Employee',
-            'Are you sure you want to delete this employee? This action cannot be undone.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        setLoading(true);
-                        try {
-                            await onDelete(initialData.id);
-                            onClose();
-                        } catch {
-                            Alert.alert('Error', 'Failed to delete employee');
-                        } finally {
-                            setLoading(false);
-                        }
-                    }
-                }
-            ]
-        );
     };
 
     return (
@@ -249,7 +227,12 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     <View style={styles.modalContent}>
                         <View style={styles.modalHandle} />
                         <View style={styles.header}>
-                            <Text style={styles.title}>{initialData ? 'Edit Employee' : 'New Employee'}</Text>
+                            <View>
+                                <Text style={styles.title}>
+                                    {initialData ? 'Edit Employee' : 'New Employee'}
+                                </Text>
+                                <Text style={styles.subtitle}>Manage Workforce Access</Text>
+                            </View>
                             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                                 <Icon name="close" size={24} color={COLORS.textSecondary} />
                             </TouchableOpacity>
@@ -264,7 +247,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                         >
                             {/* Name */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Full Name</Text>
+                                <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
                                 <TextInput
                                     style={styles.input}
                                     value={name}
@@ -274,11 +257,9 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                 />
                             </View>
 
-
-
                             {/* Username */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Username</Text>
+                                <Text style={styles.label}>Username <Text style={styles.required}>*</Text></Text>
                                 <TextInput
                                     style={styles.input}
                                     value={username}
@@ -289,9 +270,11 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                 />
                             </View>
 
-                            {/* Email (Optional) */}
+                            {/* Email */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Email (Optional)</Text>
+                                <Text style={styles.label}>
+                                    Email {role === 'ADMIN' ? <Text style={styles.required}>*</Text> : '(Optional)'}
+                                </Text>
                                 <TextInput
                                     style={styles.input}
                                     value={email}
@@ -303,9 +286,76 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                 />
                             </View>
 
+                            {/* Establishment Selection */}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Access Locations <Text style={styles.required}>*</Text></Text>
+                                <TouchableOpacity
+                                    style={styles.dropdownButton}
+                                    onPress={() => setShowEstablishmentDropdown(!showEstablishmentDropdown)}
+                                >
+                                    <View style={styles.rowGap8}>
+                                        <Icon name="map-marker-multiple" size={18} color={COLORS.primary} />
+                                        <Text style={styles.dropdownButtonText}>
+                                            {selectedEstablishmentIds.length === 0
+                                                ? 'Select establishments...'
+                                                : selectedEstablishmentIds.length === establishments.length
+                                                    ? 'All Establishments'
+                                                    : `${selectedEstablishmentIds.length} location${selectedEstablishmentIds.length === 1 ? '' : 's'} selected`}
+                                        </Text>
+                                    </View>
+                                    <Icon
+                                        name={showEstablishmentDropdown ? "chevron-up" : "chevron-down"}
+                                        size={20}
+                                        color={COLORS.textSecondary}
+                                    />
+                                </TouchableOpacity>
+
+                                {showEstablishmentDropdown && (
+                                    <View style={styles.dropdownList}>
+                                        {/* Search */}
+                                        <View style={styles.searchContainer}>
+                                            <TextInput
+                                                style={styles.searchInput}
+                                                placeholder="Search locations..."
+                                                placeholderTextColor={COLORS.textTertiary}
+                                                value={establishmentSearch}
+                                                onChangeText={setEstablishmentSearch}
+                                            />
+                                        </View>
+                                        {/* List */}
+                                        {filteredEstablishments.map(est => {
+                                            const isSelected = selectedEstablishmentIds.includes(est.id);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={est.id}
+                                                    style={[
+                                                        styles.dropdownItem,
+                                                        isSelected && { backgroundColor: COLORS.successBg }
+                                                    ]}
+                                                    onPress={() => toggleEstablishment(est.id)}
+                                                >
+                                                    <Text style={[
+                                                        styles.dropdownItemText,
+                                                        isSelected && { color: COLORS.primary, fontWeight: '700' }
+                                                    ]}>
+                                                        {est.name}
+                                                    </Text>
+                                                    {isSelected && (
+                                                        <Icon name="check" size={16} color={COLORS.primary} />
+                                                    )}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                        {filteredEstablishments.length === 0 && (
+                                            <Text style={styles.noResults}>No locations found</Text>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+
                             {/* Role Selection */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Role</Text>
+                                <Text style={styles.label}>Role <Text style={styles.required}>*</Text></Text>
                                 <View style={[styles.roleSelector, { borderColor: COLORS.border, backgroundColor: COLORS.white }]}>
                                     <TouchableOpacity
                                         style={[
@@ -344,7 +394,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                 </View>
                             </View>
 
-                            {/* PERMISSIONS SECTION */}
+                            {/* Permissions Section */}
                             {role === 'USER' && (
                                 <View style={styles.permissionsContainer}>
                                     <Text style={[styles.label, { color: COLORS.textSecondary }]}>Permissions</Text>
@@ -358,7 +408,11 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                                 {permissions.length} selected
                                             </Text>
                                         </View>
-                                        <Icon name={showPermissionsDropdown ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
+                                        <Icon
+                                            name={showPermissionsDropdown ? "chevron-up" : "chevron-down"}
+                                            size={20}
+                                            color={COLORS.textSecondary}
+                                        />
                                     </TouchableOpacity>
 
                                     {showPermissionsDropdown && (
@@ -372,10 +426,15 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                                         onPress={() => !isLocked && togglePermission(perm.id)}
                                                     >
                                                         <View style={styles.flex1}>
-                                                            <Text style={[styles.dropdownItemText, { fontWeight: permissions.includes(perm.id) ? '700' : '400' }]}>
+                                                            <Text style={[
+                                                                styles.dropdownItemText,
+                                                                { fontWeight: permissions.includes(perm.id) ? '700' : '400' }
+                                                            ]}>
                                                                 {perm.label}
                                                             </Text>
-                                                            <Text style={[styles.descriptionText, { color: COLORS.textTertiary }]}>{perm.description}</Text>
+                                                            <Text style={[styles.descriptionText, { color: COLORS.textTertiary }]}>
+                                                                {perm.description}
+                                                            </Text>
                                                         </View>
                                                         {permissions.includes(perm.id) && (
                                                             <Icon name={isLocked ? "lock" : "check"} size={16} color={COLORS.primary} />
@@ -388,66 +447,12 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                 </View>
                             )}
 
-                            {/* DISCOUNT SELECTION */}
-                            {role === 'USER' && permissions.includes('discounts') && discountsForUser.length > 0 && (
-                                <View style={styles.permissionsContainer}>
-                                    <Text style={[styles.label, { color: COLORS.textSecondary }]}>Allowed Discounts</Text>
-
-                                    <TouchableOpacity
-                                        style={styles.dropdownButton}
-                                        onPress={() => handleAllDiscountsToggle(!allDiscountsSelected)}
-                                    >
-                                        <View style={styles.rowGap8}>
-                                            <Icon name="tag-multiple" size={18} color={COLORS.primary} />
-                                            <Text style={styles.dropdownButtonText}>
-                                                {allDiscountsSelected ? 'All Discounts Allowed' : `${allowedDiscounts.length} Selected`}
-                                            </Text>
-                                        </View>
-                                        {allDiscountsSelected && <Icon name="check" size={16} color={COLORS.primary} />}
-                                    </TouchableOpacity>
-
-                                    {!allDiscountsSelected && (
-                                        <>
-                                            <TouchableOpacity
-                                                style={[styles.dropdownButton, styles.marginTop8]}
-                                                onPress={() => setShowDiscountsDropdown(!showDiscountsDropdown)}
-                                            >
-                                                <Text style={styles.dropdownButtonText}>Select Specific Discounts</Text>
-                                                <Icon name={showDiscountsDropdown ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
-                                            </TouchableOpacity>
-
-                                            {showDiscountsDropdown && (
-                                                <View style={styles.dropdownList}>
-                                                    {discountsForUser.map((discount) => (
-                                                        <TouchableOpacity
-                                                            key={discount.id}
-                                                            style={styles.dropdownItem}
-                                                            onPress={() => toggleDiscount(discount.id)}
-                                                        >
-                                                            <View style={styles.flex1}>
-                                                                <Text style={[styles.dropdownItemText, { fontWeight: allowedDiscounts.includes(discount.id) ? '700' : '400' }]}>
-                                                                    {discount.name}
-                                                                </Text>
-                                                                <Text style={[styles.descriptionText, { color: COLORS.textTertiary }]}>
-                                                                    {(discount.percentage * 100).toFixed(0)}% Off
-                                                                </Text>
-                                                            </View>
-                                                            {allowedDiscounts.includes(discount.id) && (
-                                                                <Icon name="check" size={16} color={COLORS.primary} />
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            )}
-                                        </>
-                                    )}
-                                </View>
-                            )}
-
                             {/* Password Section */}
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>
-                                    {initialData ? 'Change Password' : 'Password'} {initialData && '(Leave blank to keep current)'}
+                                    {initialData ? 'Change Password' : 'Password'}
+                                    {!initialData && <Text style={styles.required}> *</Text>}
+                                    {initialData && ' (Leave blank to keep current)'}
                                 </Text>
                                 <View style={styles.passwordContainer}>
                                     <TextInput
@@ -481,16 +486,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                         </ScrollView>
 
                         <View style={styles.footer}>
-                            {initialData && onDelete && (
-                                <TouchableOpacity
-                                    style={styles.deleteButton}
-                                    onPress={handleDelete}
-                                    disabled={loading}
-                                >
-                                    <Icon name="trash-can-outline" size={24} color={COLORS.error} />
-                                </TouchableOpacity>
-                            )}
-
                             <TouchableOpacity
                                 style={[styles.cancelButton, { borderColor: COLORS.border }]}
                                 onPress={onClose}
@@ -507,7 +502,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                                     <ActivityIndicator color="#FFF" size="small" />
                                 ) : (
                                     <Text style={styles.submitButtonText}>
-                                        {initialData ? 'Save' : 'Add'}
+                                        {initialData ? 'Save Changes' : 'Add Employee'}
                                     </Text>
                                 )}
                             </TouchableOpacity>
@@ -539,12 +534,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     modalContent: {
         backgroundColor: colors.surface,
         borderRadius: 32,
-        paddingTop: 12, // Reduced for handle
+        paddingTop: 12,
         paddingHorizontal: 24,
         paddingBottom: 0,
         width: '100%',
-        maxHeight: '85%',
-        minHeight: 400, // Ensure it doesn't look tiny
+        maxHeight: '90%',
+        minHeight: 400,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.4,
@@ -564,25 +559,30 @@ const createStyles = (colors: any) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 20,
     },
     title: {
         fontSize: 22,
         fontWeight: '800',
         color: colors.textPrimary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    subtitle: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginTop: 2,
     },
     closeButton: {
         padding: 4,
     },
-    scrollView: {
-        // flex: 1 removed to allow self-sizing
-    },
+    scrollView: {},
     scrollContent: {
         paddingBottom: 20,
-    },
-    formContainer: {
-        marginBottom: 20,
     },
     inputGroup: {
         marginBottom: 16,
@@ -591,137 +591,161 @@ const createStyles = (colors: any) => StyleSheet.create({
         marginBottom: 16,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 10,
+        fontWeight: '800',
         color: colors.textSecondary,
         marginBottom: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    required: {
+        color: colors.error,
     },
     input: {
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingVertical: 14,
         fontSize: 15,
+        fontWeight: '600',
         color: colors.textPrimary,
-    },
-    textArea: {
-        height: 80,
-        textAlignVertical: 'top',
     },
     roleSelector: {
         flexDirection: 'row',
         borderWidth: 1,
-        borderRadius: 10,
+        borderRadius: 12,
         overflow: 'hidden',
+        padding: 4,
     },
     roleButton: {
         flex: 1,
         paddingVertical: 12,
         alignItems: 'center',
+        borderRadius: 10,
     },
-    roleButtonActive: {
-        // dynamic
-    },
+    roleButtonActive: {},
     roleButtonText: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     roleButtonTextActive: {
-        fontWeight: '700',
+        fontWeight: '800',
     },
     passwordContainer: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     eyeButton: {
-        width: 50,
-        height: 50,
+        width: 52,
+        height: 52,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
         borderLeftWidth: 0,
-        borderTopRightRadius: 10,
-        borderBottomRightRadius: 10,
+        borderTopRightRadius: 12,
+        borderBottomRightRadius: 12,
     },
     dropdownButton: {
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingVertical: 14,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     dropdownButtonText: {
-        fontSize: 15,
+        fontSize: 14,
+        fontWeight: '600',
         color: colors.textPrimary,
     },
     dropdownList: {
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 10,
-        marginTop: -12,
-        marginBottom: 16,
+        borderRadius: 12,
+        marginTop: 8,
         paddingVertical: 4,
+        maxHeight: 200,
         elevation: 5,
         zIndex: 10,
+    },
+    searchContainer: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+    },
+    searchInput: {
+        backgroundColor: colors.background,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 13,
+        color: colors.textPrimary,
     },
     dropdownItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: 12,
         paddingHorizontal: 14,
+        borderRadius: 8,
+        marginHorizontal: 4,
+        marginVertical: 2,
     },
     dropdownItemText: {
         fontSize: 14,
         color: colors.textSecondary,
     },
+    noResults: {
+        textAlign: 'center',
+        padding: 16,
+        color: colors.textTertiary,
+        fontSize: 13,
+    },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: 12,
         paddingTop: 16,
         paddingBottom: 24,
         borderTopWidth: 1,
         borderTopColor: colors.border,
     },
-    deleteButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 10,
-        backgroundColor: colors.errorBg,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     cancelButton: {
         flex: 1,
-        height: 48,
-        borderRadius: 10,
+        height: 52,
+        borderRadius: 14,
         borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     cancelButtonText: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     submitButton: {
         flex: 1,
-        height: 48,
-        borderRadius: 10,
+        height: 52,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
     },
     submitButtonText: {
         color: '#FFF',
-        fontSize: 15,
-        fontWeight: '700',
+        fontSize: 14,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     rowGap8: {
         flexDirection: 'row',
@@ -733,9 +757,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
     descriptionText: {
         fontSize: 11,
-    },
-    marginTop8: {
-        marginTop: 8,
+        marginTop: 2,
     },
     passwordInput: {
         flex: 1,
@@ -744,4 +766,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
 });
 
-export default EmployeeFormModal;
+export default OwnerEmployeeFormModal;

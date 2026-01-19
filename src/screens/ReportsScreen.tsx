@@ -32,6 +32,8 @@ import {
   getLiveShiftReport,
   fetchUserName,
   shareOrdersReport,
+  getHourlySales,
+  HourlySales,
 } from '../services/reports';
 import {
   HistoricalOrder,
@@ -46,6 +48,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import PayInPayOutLogModal from '../components/reports/PayInPayOutLogModal';
 import TotalTimeWorkedLogModal from '../components/reports/TotalTimeWorkedLogModal';
 import OrderDetailsModal from '../components/reports/OrderDetailsModal';
+import PeakHoursChart from '../components/dashboard/PeakHoursChart';
 import CustomDateTimePicker from '../components/CustomDateTimePicker'; // Import CustomDateTimePicker
 import { useTimeValidation } from '../hooks/useTimeValidation'; // Import useTimeValidation
 import { getColors } from '../constants/colors';
@@ -70,6 +73,7 @@ const ReportsScreen = () => {
   const [payInOutLogs, setPayInOutLogs] = useState<PayInPayOutLogEntry[]>([]);
   const [liveShiftData, setLiveShiftData] = useState<LiveShiftReport | null>(null);
   const [totalTimeWorked, setTotalTimeWorked] = useState('0h 0m');
+  const [hourlySales, setHourlySales] = useState<HourlySales[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [reportType, setReportType] = useState<'overview' | 'items' | 'employees' | 'receipts'>('overview');
 
@@ -353,6 +357,10 @@ const ReportsScreen = () => {
       } else {
         setLiveShiftData(null);
       }
+
+      // Fetch hourly sales for peak hours chart
+      const hourlyData = await getHourlySales(actualStartDate, actualEndDate);
+      setHourlySales(hourlyData);
 
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -937,6 +945,13 @@ const ReportsScreen = () => {
               </TouchableOpacity>
             </View>
 
+            {/* Peak Hours Chart */}
+            {hourlySales.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <PeakHoursChart data={hourlySales} />
+              </View>
+            )}
+
             {/* Recent Orders List */}
             <View style={styles.section}>
 
@@ -1262,18 +1277,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
-    marginHorizontal: 20,
-    marginTop: 10, // Reduced since SafeAreaView now handles the top spacing
+    marginHorizontal: 16,
+    marginTop: 10,
     backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    // Cross-platform shadows
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerActions: {
     flexDirection: 'row',
@@ -1281,13 +1295,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 8
   },
   filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border
   },
   filterButtonActive: {
@@ -1363,14 +1377,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     width: width * 0.9,
     maxWidth: 500,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 4,
   },
   dropdownTitle: {
@@ -1410,41 +1424,32 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 16,
   },
   rangeSelectorContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
     gap: 10,
   },
   rangeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    overflow: 'visible',
   },
   rangeButtonSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'rgba(124, 195, 159, 0.1)',
     borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   rangeButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textSecondary,
   },
   rangeButtonTextSelected: {
-    color: colors.white,
+    color: colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -1739,49 +1744,44 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   // Report Type Tabs
   tabContainer: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    minHeight: 40,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: colors.background,
   },
   tabContent: {
-    paddingHorizontal: 20,
-    gap: 10,
-    paddingVertical: 2, // Extra padding for shadows
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 6,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    minHeight: 36,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    minHeight: 44,
   },
   tabActive: {
-    borderColor: colors.primary,
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
   },
   tabText: {
     fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: -0.2,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   tabTextActive: {
-    fontWeight: '700',
+    fontWeight: '800',
   },
 
   // Order Type Filter Tabs
@@ -1791,39 +1791,37 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   orderTypeTabsContent: {
     gap: 8,
-    paddingHorizontal: 20,
     paddingVertical: 4,
   },
   orderTypeTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8, // Slightly more gap for badge
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 100, // Fully rounded
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 12,
     backgroundColor: colors.containerGray,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    minHeight: 32,
+    minHeight: 40,
   },
   orderTypeTabActive: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   orderTypeTabText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   orderTypeTabTextActive: {
     color: '#FFFFFF',
   },
   orderTypeTabBadge: {
     backgroundColor: colors.borderLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 10,
-    minWidth: 20,
+    minWidth: 24,
     alignItems: 'center',
   },
   orderTypeTabBadgeActive: {

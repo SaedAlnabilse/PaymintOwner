@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -6,7 +6,9 @@ import {
     Modal,
     TouchableOpacity,
     ActivityIndicator,
-    Pressable
+    Pressable,
+    Alert,
+    TextInput
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,25 +16,71 @@ import moment from 'moment-timezone';
 import { OrderDetails } from '../../types/reports';
 import { getColors } from '../../constants/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { apiClient } from '../../services/apiClient';
 
 interface OrderDetailsModalProps {
     visible: boolean;
     onClose: () => void;
     order: OrderDetails | null;
     isLoading?: boolean;
+    onRefundSuccess?: () => void;
 }
+
+const REFUND_REASONS = [
+    'Customer request',
+    'Wrong order',
+    'Quality issue',
+    'Item not available',
+    'Other',
+];
 
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     visible,
     onClose,
     order,
     isLoading,
+    onRefundSuccess,
 }) => {
     const { isDarkMode } = useTheme();
     const COLORS = getColors(isDarkMode);
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
 
+    const [showRefundModal, setShowRefundModal] = useState(false);
+    const [selectedReason, setSelectedReason] = useState('');
+    const [customReason, setCustomReason] = useState('');
+    const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+
     if (!visible) return null;
+
+    const canRefund = order &&
+        order.status !== 'REFUNDED' &&
+        order.status !== 'HELD' &&
+        !order.isRefunded;
+
+    const handleRefund = async () => {
+        if (!order) return;
+
+        const reason = selectedReason === 'Other' ? customReason : selectedReason;
+        if (!reason.trim()) {
+            Alert.alert('Error', 'Please select or enter a refund reason');
+            return;
+        }
+
+        setIsProcessingRefund(true);
+        try {
+            await apiClient.post(`/api/orders/${order.id}/refund`, { reason });
+            Alert.alert('Success', 'Order has been refunded successfully');
+            setShowRefundModal(false);
+            setSelectedReason('');
+            setCustomReason('');
+            onRefundSuccess?.();
+            onClose();
+        } catch (error: any) {
+            Alert.alert('Error', error?.response?.data?.message || 'Failed to process refund');
+        } finally {
+            setIsProcessingRefund(false);
+        }
+    };
 
     // Helper to calculate total discount percentage if not provided directly
     const discountPercentage = order && order.subtotal > 0 && order.discountAmount
@@ -173,6 +221,28 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                     <Text style={styles.paymentMethod}>Paid with {order.paymentMethod}</Text>
                                 </View>
                             </View>
+
+                            {/* Refund Button */}
+                            {canRefund && (
+                                <TouchableOpacity
+                                    style={styles.refundButton}
+                                    onPress={() => setShowRefundModal(true)}
+                                >
+                                    <Icon name="cash-refund" size={20} color="#FFF" />
+                                    <Text style={styles.refundButtonText}>Process Refund</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {/* Refunded Badge */}
+                            {(order.isRefunded || order.status === 'REFUNDED') && (
+                                <View style={styles.refundedBadge}>
+                                    <Icon name="alert-circle" size={18} color={COLORS.error} />
+                                    <Text style={styles.refundedText}>
+                                        This order has been refunded
+                                        {order.refundReason ? `: ${order.refundReason}` : ''}
+                                    </Text>
+                                </View>
+                            )}
                         </ScrollView>
                     ) : (
                         <View style={styles.errorContainer}>
@@ -180,6 +250,86 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         </View>
                     )}
                 </View>
+
+                {/* Refund Confirmation Modal */}
+                <Modal
+                    visible={showRefundModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowRefundModal(false)}
+                >
+                    <View style={styles.refundModalOverlay}>
+                        <Pressable style={styles.backdrop} onPress={() => setShowRefundModal(false)} />
+                        <View style={styles.refundModalContent}>
+                            <View style={styles.refundModalHeader}>
+                                <Icon name="cash-refund" size={32} color={COLORS.error} />
+                                <Text style={styles.refundModalTitle}>Process Refund</Text>
+                                <Text style={styles.refundModalSubtitle}>
+                                    Refund {order?.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })} JOD for Order #{order?.orderNumber}
+                                </Text>
+                            </View>
+
+                            <Text style={styles.refundReasonLabel}>Select Reason:</Text>
+                            <View style={styles.refundReasonsContainer}>
+                                {REFUND_REASONS.map((reason) => (
+                                    <TouchableOpacity
+                                        key={reason}
+                                        style={[
+                                            styles.refundReasonChip,
+                                            selectedReason === reason && styles.refundReasonChipSelected
+                                        ]}
+                                        onPress={() => setSelectedReason(reason)}
+                                    >
+                                        <Text style={[
+                                            styles.refundReasonChipText,
+                                            selectedReason === reason && styles.refundReasonChipTextSelected
+                                        ]}>
+                                            {reason}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {selectedReason === 'Other' && (
+                                <TextInput
+                                    style={styles.customReasonInput}
+                                    placeholder="Enter custom reason..."
+                                    placeholderTextColor={COLORS.textTertiary}
+                                    value={customReason}
+                                    onChangeText={setCustomReason}
+                                    multiline
+                                />
+                            )}
+
+                            <View style={styles.refundModalActions}>
+                                <TouchableOpacity
+                                    style={styles.refundCancelButton}
+                                    onPress={() => {
+                                        setShowRefundModal(false);
+                                        setSelectedReason('');
+                                        setCustomReason('');
+                                    }}
+                                >
+                                    <Text style={styles.refundCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.refundConfirmButton,
+                                        (!selectedReason || isProcessingRefund) && styles.refundConfirmButtonDisabled
+                                    ]}
+                                    onPress={handleRefund}
+                                    disabled={!selectedReason || isProcessingRefund}
+                                >
+                                    {isProcessingRefund ? (
+                                        <ActivityIndicator size="small" color="#FFF" />
+                                    ) : (
+                                        <Text style={styles.refundConfirmText}>Confirm Refund</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </View>
         </Modal>
     );
@@ -419,7 +569,151 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
     errorText: {
         color: colors.error
-    }
+    },
+    // Refund styles
+    refundButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: colors.error,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        marginTop: 20,
+    },
+    refundButtonText: {
+        color: '#FFF',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    refundedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: colors.errorBg || '#FEE2E2',
+        padding: 12,
+        borderRadius: 10,
+        marginTop: 20,
+    },
+    refundedText: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.error,
+    },
+    refundModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    refundModalContent: {
+        width: '100%',
+        maxWidth: 400,
+        backgroundColor: colors.surface,
+        borderRadius: 20,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    refundModalHeader: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    refundModalTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        marginTop: 12,
+    },
+    refundModalSubtitle: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: colors.textSecondary,
+        marginTop: 4,
+        textAlign: 'center',
+    },
+    refundReasonLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        marginBottom: 12,
+    },
+    refundReasonsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 16,
+    },
+    refundReasonChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
+    },
+    refundReasonChipSelected: {
+        borderColor: colors.error,
+        backgroundColor: colors.errorBg || '#FEE2E2',
+    },
+    refundReasonChipText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    refundReasonChipTextSelected: {
+        color: colors.error,
+    },
+    customReasonInput: {
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 12,
+        padding: 12,
+        fontSize: 14,
+        color: colors.textPrimary,
+        minHeight: 80,
+        textAlignVertical: 'top',
+        marginBottom: 16,
+    },
+    refundModalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 8,
+    },
+    refundCancelButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: colors.background,
+        alignItems: 'center',
+    },
+    refundCancelText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.textSecondary,
+    },
+    refundConfirmButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: colors.error,
+        alignItems: 'center',
+    },
+    refundConfirmButtonDisabled: {
+        opacity: 0.5,
+    },
+    refundConfirmText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFF',
+    },
 });
 
 export default OrderDetailsModal;

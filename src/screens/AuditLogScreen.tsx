@@ -6,6 +6,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Modal,
+  Pressable,
+  ScrollView,
 } from 'react-native';
 import moment from 'moment-timezone';
 import { format } from 'date-fns';
@@ -13,9 +16,14 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import CustomDateTimePicker from '../components/CustomDateTimePicker';
 import { ScreenContainer } from '../components/ScreenContainer';
-import { fetchActivityLogs, ActivityLog } from '../services/activityLog';
+import { fetchActivityLogs, ActivityLog, ACTION_TYPES } from '../services/activityLog';
 import { getColors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+
+interface User {
+  id: string;
+  name: string;
+}
 
 const AuditLogScreen = () => {
   const { isDarkMode } = useTheme();
@@ -46,6 +54,14 @@ const AuditLogScreen = () => {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+
+  // User and action filters
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedAction, setSelectedAction] = useState<string>('');
+  const [uniqueUsers, setUniqueUsers] = useState<User[]>([]);
+  const [showUserPicker, setShowUserPicker] = useState(false);
+  const [showActionPicker, setShowActionPicker] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Temporary state for date/time picker values
   const [tempStartDate, setTempStartDate] = useState<Date | null>(null);
@@ -119,13 +135,24 @@ const AuditLogScreen = () => {
         limit: 50,
         startDate: startDateFormatted,
         endDate: endDateFormatted,
+        userId: selectedUserId || undefined,
+        action: selectedAction || undefined,
       });
 
       // Client-side filter to ensure logs are within the time range (just in case backend returns more)
-      const filteredLogs = logsData.filter(log => {
+      let filteredLogs = logsData.filter(log => {
         const logTime = new Date(log.timestamp);
         return logTime >= actualStartDate && logTime <= actualEndDate;
       });
+
+      // Extract unique users for the user filter
+      const usersMap = new Map<string, User>();
+      logsData.forEach(log => {
+        if (log.userId && log.performedBy?.name) {
+          usersMap.set(log.userId, { id: log.userId, name: log.performedBy.name });
+        }
+      });
+      setUniqueUsers(Array.from(usersMap.values()));
 
       setLogs(filteredLogs);
     } catch (error) {
@@ -134,7 +161,7 @@ const AuditLogScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, startDate, endDate, startTime, endTime]);
+  }, [page, startDate, endDate, startTime, endTime, selectedUserId, selectedAction]);
 
   useEffect(() => {
     getLogs();
@@ -315,6 +342,50 @@ const AuditLogScreen = () => {
         </View>
       </View>
 
+      {/* Additional Filters Row */}
+      <View style={styles.additionalFilters}>
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            { backgroundColor: selectedUserId ? COLORS.primary + '15' : COLORS.white, borderColor: selectedUserId ? COLORS.primary : COLORS.border }
+          ]}
+          onPress={() => setShowUserPicker(true)}
+        >
+          <Icon name="account" size={16} color={selectedUserId ? COLORS.primary : COLORS.textSecondary} />
+          <Text style={[styles.filterChipText, { color: selectedUserId ? COLORS.primary : COLORS.textSecondary }]}>
+            {selectedUserId ? uniqueUsers.find(u => u.id === selectedUserId)?.name || 'User' : 'All Users'}
+          </Text>
+          <Icon name="chevron-down" size={16} color={selectedUserId ? COLORS.primary : COLORS.textTertiary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            { backgroundColor: selectedAction ? COLORS.primary + '15' : COLORS.white, borderColor: selectedAction ? COLORS.primary : COLORS.border }
+          ]}
+          onPress={() => setShowActionPicker(true)}
+        >
+          <Icon name="lightning-bolt" size={16} color={selectedAction ? COLORS.primary : COLORS.textSecondary} />
+          <Text style={[styles.filterChipText, { color: selectedAction ? COLORS.primary : COLORS.textSecondary }]}>
+            {selectedAction ? ACTION_TYPES.find(a => a.value === selectedAction)?.label || 'Action' : 'All Actions'}
+          </Text>
+          <Icon name="chevron-down" size={16} color={selectedAction ? COLORS.primary : COLORS.textTertiary} />
+        </TouchableOpacity>
+
+        {(selectedUserId || selectedAction) && (
+          <TouchableOpacity
+            style={[styles.clearFiltersBtn, { backgroundColor: COLORS.errorBg }]}
+            onPress={() => {
+              setSelectedUserId('');
+              setSelectedAction('');
+            }}
+          >
+            <Icon name="close" size={16} color={COLORS.error} />
+            <Text style={[styles.clearFiltersText, { color: COLORS.error }]}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={[styles.listContainer, { backgroundColor: COLORS.background }]}>
         {loading && logs.length === 0 ? (
           <View style={styles.loadingContainer}>
@@ -409,6 +480,102 @@ const AuditLogScreen = () => {
           setTempEndTime(null);
         }}
       />
+
+      {/* User Picker Modal */}
+      <Modal
+        visible={showUserPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowUserPicker(false)}
+      >
+        <View style={styles.pickerModalBg}>
+          <Pressable style={styles.pickerOverlay} onPress={() => setShowUserPicker(false)} />
+          <View style={[styles.pickerContainer, { backgroundColor: COLORS.white }]}>
+            <View style={[styles.pickerHeader, { borderBottomColor: COLORS.borderLight }]}>
+              <Text style={[styles.pickerTitle, { color: COLORS.textPrimary }]}>Select User</Text>
+              <TouchableOpacity onPress={() => setShowUserPicker(false)}>
+                <Icon name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              <TouchableOpacity
+                style={[styles.pickerItem, { borderBottomColor: COLORS.borderLight }]}
+                onPress={() => {
+                  setSelectedUserId('');
+                  setShowUserPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.pickerItemText,
+                  { color: !selectedUserId ? COLORS.primary : COLORS.textPrimary, fontWeight: !selectedUserId ? '700' : '400' }
+                ]}>All Users</Text>
+                {!selectedUserId && <Icon name="check" size={20} color={COLORS.primary} />}
+              </TouchableOpacity>
+              {uniqueUsers.map((user) => (
+                <TouchableOpacity
+                  key={user.id}
+                  style={[styles.pickerItem, { borderBottomColor: COLORS.borderLight }]}
+                  onPress={() => {
+                    setSelectedUserId(user.id);
+                    setShowUserPicker(false);
+                  }}
+                >
+                  <View style={styles.pickerItemLeft}>
+                    <View style={[styles.pickerAvatar, { backgroundColor: COLORS.containerGray }]}>
+                      <Text style={[styles.pickerAvatarText, { color: COLORS.primary }]}>
+                        {user.name.split(' ').map(n => n.charAt(0)).join('').substring(0, 2)}
+                      </Text>
+                    </View>
+                    <Text style={[
+                      styles.pickerItemText,
+                      { color: user.id === selectedUserId ? COLORS.primary : COLORS.textPrimary, fontWeight: user.id === selectedUserId ? '700' : '400' }
+                    ]}>{user.name}</Text>
+                  </View>
+                  {user.id === selectedUserId && <Icon name="check" size={20} color={COLORS.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Action Picker Modal */}
+      <Modal
+        visible={showActionPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowActionPicker(false)}
+      >
+        <View style={styles.pickerModalBg}>
+          <Pressable style={styles.pickerOverlay} onPress={() => setShowActionPicker(false)} />
+          <View style={[styles.pickerContainer, { backgroundColor: COLORS.white }]}>
+            <View style={[styles.pickerHeader, { borderBottomColor: COLORS.borderLight }]}>
+              <Text style={[styles.pickerTitle, { color: COLORS.textPrimary }]}>Select Action Type</Text>
+              <TouchableOpacity onPress={() => setShowActionPicker(false)}>
+                <Icon name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {ACTION_TYPES.map((action) => (
+                <TouchableOpacity
+                  key={action.value}
+                  style={[styles.pickerItem, { borderBottomColor: COLORS.borderLight }]}
+                  onPress={() => {
+                    setSelectedAction(action.value);
+                    setShowActionPicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.pickerItemText,
+                    { color: action.value === selectedAction ? COLORS.primary : COLORS.textPrimary, fontWeight: action.value === selectedAction ? '700' : '400' }
+                  ]}>{action.label}</Text>
+                  {action.value === selectedAction && <Icon name="check" size={20} color={COLORS.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 };
@@ -682,6 +849,92 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  additionalFilters: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  clearFiltersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  clearFiltersText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pickerModalBg: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  pickerOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  pickerContainer: {
+    maxHeight: '60%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  pickerItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pickerItemText: {
+    fontSize: 16,
+  },
+  pickerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
 

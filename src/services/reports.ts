@@ -206,11 +206,17 @@ export interface SalesComparison {
     totalSales: number;
     orderCount: number;
     averageSale: number;
+    refunds: number;
+    payIn: number;
+    payOut: number;
   };
   previous: {
     totalSales: number;
     orderCount: number;
     averageSale: number;
+    refunds: number;
+    payIn: number;
+    payOut: number;
   };
   percentageChange: {
     sales: number;
@@ -235,12 +241,18 @@ export const getSalesComparison = async (
       totalSales: currentData.totalNetSales || 0,
       orderCount: currentData.totalOrders || 0,
       averageSale: currentData.totalOrders > 0 ? (currentData.totalNetSales || 0) / currentData.totalOrders : 0,
+      refunds: currentData.totalRefunds || 0,
+      payIn: currentData.totalPayIn || 0,
+      payOut: currentData.totalPayOut || 0,
     };
 
     const previous = {
       totalSales: previousData.totalNetSales || 0,
       orderCount: previousData.totalOrders || 0,
       averageSale: previousData.totalOrders > 0 ? (previousData.totalNetSales || 0) / previousData.totalOrders : 0,
+      refunds: previousData.totalRefunds || 0,
+      payIn: previousData.totalPayIn || 0,
+      payOut: previousData.totalPayOut || 0,
     };
 
     const calculateChange = (current: number, previous: number): number => {
@@ -260,8 +272,8 @@ export const getSalesComparison = async (
   } catch (error) {
     console.error('Failed to get sales comparison:', error);
     return {
-      current: { totalSales: 0, orderCount: 0, averageSale: 0 },
-      previous: { totalSales: 0, orderCount: 0, averageSale: 0 },
+      current: { totalSales: 0, orderCount: 0, averageSale: 0, refunds: 0, payIn: 0, payOut: 0 },
+      previous: { totalSales: 0, orderCount: 0, averageSale: 0, refunds: 0, payIn: 0, payOut: 0 },
       percentageChange: { sales: 0, orders: 0, average: 0 },
     };
   }

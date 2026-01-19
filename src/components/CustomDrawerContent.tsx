@@ -34,6 +34,7 @@ const CustomDrawerContent = (props: any) => {
   const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
   const [isPeopleExpanded, setIsPeopleExpanded] = useState(false);
   const [isSystemExpanded, setIsSystemExpanded] = useState(false);
+  const [isOwnerExpanded, setIsOwnerExpanded] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -56,7 +57,8 @@ const CustomDrawerContent = (props: any) => {
   const groupedRoutes = [
     'Products', 'Attributes', 'Manufacturing', 'Recipes', // Inventory
     'Staff', 'Customers', // People
-    'Settings', 'AuditLog', 'Notifications' // System
+    'Settings', 'AuditLog', 'Notifications', // System
+    'OwnerOverview', 'OwnerEmployees', 'Brands', 'Establishments', 'AdminUsers' // Owner Portal
   ];
 
   // Calculate filtered routes
@@ -341,6 +343,85 @@ const CustomDrawerContent = (props: any) => {
                   icon={({ color }) => <MaterialCommunityIcon name="alert-circle-outline" size={20} color={color} />}
                   onPress={() => props.navigation.navigate('Notifications')}
                   focused={isRouteActive('Notifications')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Owner Portal Group */}
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={[
+                styles.groupHeader,
+                isOwnerExpanded && { backgroundColor: theme.colors.primary + '05' }
+              ]}
+              onPress={() => setIsOwnerExpanded(!isOwnerExpanded)}
+            >
+              <View style={styles.groupHeaderContent}>
+                <MaterialCommunityIcon
+                  name="crown-outline"
+                  size={22}
+                  color={isOwnerExpanded ? theme.colors.primary : COLORS.textSecondary}
+                />
+                <Text style={[
+                  styles.groupHeaderText,
+                  { color: isOwnerExpanded ? theme.colors.primary : COLORS.textSecondary }
+                ]}>Owner Portal</Text>
+              </View>
+              <Icon name={isOwnerExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            {isOwnerExpanded && (
+              <View style={[styles.subGroupContainer, { borderLeftColor: theme.colors.primary + '20' }]}>
+                <DrawerItem
+                  label="Owner Overview"
+                  icon={({ color }) => <MaterialCommunityIcon name="view-dashboard" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('OwnerOverview')}
+                  focused={isRouteActive('OwnerOverview')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Global Workforce"
+                  icon={({ color }) => <MaterialCommunityIcon name="account-multiple-check" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('OwnerEmployees')}
+                  focused={isRouteActive('OwnerEmployees')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Establishments"
+                  icon={({ color }) => <MaterialCommunityIcon name="store-outline" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Establishments')}
+                  focused={isRouteActive('Establishments')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Brands"
+                  icon={({ color }) => <MaterialCommunityIcon name="tag-heart" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('Brands')}
+                  focused={isRouteActive('Brands')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Admin Users"
+                  icon={({ color }) => <MaterialCommunityIcon name="account-key" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('AdminUsers')}
+                  focused={isRouteActive('AdminUsers')}
                   labelStyle={styles.subItemLabel}
                   style={styles.subItem}
                   activeTintColor={theme.colors.primary}
