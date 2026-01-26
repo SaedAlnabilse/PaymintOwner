@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  FlatList,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
@@ -17,7 +19,8 @@ import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIc
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { AppDispatch, RootState } from '../store/store';
-import { loginAccount, clearError } from '../store/slices/authSlice';
+import { loginAccount, loginEmployeeBackoffice, clearError } from '../store/slices/authSlice';
+import { apiClient } from '../services/apiClient';
 
 const AccountLoginScreen = () => {
   const navigation = useNavigation<any>();
@@ -29,6 +32,14 @@ const AccountLoginScreen = () => {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Login mode toggle: 'owner' or 'employee'
+  const [loginMode, setLoginMode] = useState<'owner' | 'employee'>('owner');
+
+  // Employee login state
+  const [establishmentId, setEstablishmentId] = useState('');
+  const [establishmentIdFocused, setEstablishmentIdFocused] = useState(false);
+  const [establishmentIdError, setEstablishmentIdError] = useState('');
 
   const dispatch = useDispatch<AppDispatch>();
   const { error: globalError, isLoading } = useSelector((state: RootState) => state.auth);
@@ -42,6 +53,7 @@ const AccountLoginScreen = () => {
     let hasError = false;
     setEmailError('');
     setPasswordError('');
+    setEstablishmentIdError('');
 
     if (!email.trim()) {
       setEmailError('Email is required');
@@ -56,6 +68,12 @@ const AccountLoginScreen = () => {
       hasError = true;
     }
 
+    // For employee login, establishment ID is required
+    if (loginMode === 'employee' && !establishmentId.trim()) {
+      setEstablishmentIdError('Establishment ID is required');
+      hasError = true;
+    }
+
     return !hasError;
   };
 
@@ -65,12 +83,24 @@ const AccountLoginScreen = () => {
 
     setIsSubmitting(true);
     try {
-      await dispatch(
-        loginAccount({
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-        })
-      ).unwrap();
+      if (loginMode === 'owner') {
+        // Owner/Account login
+        await dispatch(
+          loginAccount({
+            email: email.trim().toLowerCase(),
+            password: password.trim(),
+          })
+        ).unwrap();
+      } else {
+        // Employee Back Office login
+        await dispatch(
+          loginEmployeeBackoffice({
+            email: email.trim().toLowerCase(),
+            password: password.trim(),
+            establishmentId: establishmentId.trim(),
+          })
+        ).unwrap();
+      }
       // Navigation is handled automatically by AppNavigator based on auth state
     } catch (err: any) {
       const errorMsg = typeof err === 'string' ? err : err?.message || '';
@@ -78,6 +108,10 @@ const AccountLoginScreen = () => {
         setPasswordError('Invalid email or password');
       } else if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('not found')) {
         setEmailError('Account not found');
+      } else if (errorMsg.toLowerCase().includes('backoffice') || errorMsg.toLowerCase().includes('back office')) {
+        setPasswordError(errorMsg);
+      } else if (errorMsg.toLowerCase().includes('establishment')) {
+        setEstablishmentIdError(errorMsg);
       }
     } finally {
       setIsSubmitting(false);
@@ -109,6 +143,48 @@ const AccountLoginScreen = () => {
 
               {/* Login Card */}
               <View style={styles.loginCard}>
+                {/* Login Mode Toggle */}
+                <View style={styles.loginModeToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.modeButton,
+                      loginMode === 'owner' && styles.modeButtonActive,
+                    ]}
+                    onPress={() => setLoginMode('owner')}
+                  >
+                    <MaterialCommunityIcon
+                      name="shield-account"
+                      size={18}
+                      color={loginMode === 'owner' ? '#FFF' : '#64748B'}
+                    />
+                    <Text style={[
+                      styles.modeButtonText,
+                      loginMode === 'owner' && styles.modeButtonTextActive,
+                    ]}>
+                      Owner
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modeButton,
+                      loginMode === 'employee' && styles.modeButtonActive,
+                    ]}
+                    onPress={() => setLoginMode('employee')}
+                  >
+                    <Icon
+                      name="users"
+                      size={18}
+                      color={loginMode === 'employee' ? '#FFF' : '#64748B'}
+                    />
+                    <Text style={[
+                      styles.modeButtonText,
+                      loginMode === 'employee' && styles.modeButtonTextActive,
+                    ]}>
+                      Employee
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.cardHeader}>
                   <View style={styles.headerIconContainer}>
                     <Icon name="log-in" size={24} color="#7CC39F" />
@@ -116,12 +192,51 @@ const AccountLoginScreen = () => {
                   <View style={styles.headerTextContainer}>
                     <Text style={styles.welcomeText}>Welcome Back</Text>
                     <Text style={styles.instructionText}>
-                      Sign in with your account email
+                      {loginMode === 'owner'
+                        ? 'Sign in with your account email'
+                        : 'Sign in as an employee with Back Office access'}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.formContainer}>
+                  {/* Establishment ID Input (Employee Mode Only) */}
+                  {loginMode === 'employee' && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Establishment ID</Text>
+                      <View
+                        style={[
+                          styles.inputContainer,
+                          establishmentIdFocused && styles.inputFocused,
+                          !!establishmentIdError && styles.errorBorder,
+                        ]}
+                      >
+                        <Icon name="briefcase" size={20} color={establishmentIdFocused ? '#7CC39F' : '#94A3B8'} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="e.g. est_12345"
+                          placeholderTextColor="#94A3B8"
+                          value={establishmentId}
+                          onChangeText={(text) => {
+                            setEstablishmentId(text);
+                            if (establishmentIdError) setEstablishmentIdError('');
+                            dispatch(clearError());
+                          }}
+                          onFocus={() => setEstablishmentIdFocused(true)}
+                          onBlur={() => setEstablishmentIdFocused(false)}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                      </View>
+                      {!!establishmentIdError && (
+                        <View style={styles.fieldErrorContainer}>
+                          <Icon name="alert-circle" size={14} color="#D55263" />
+                          <Text style={styles.fieldErrorText}>{establishmentIdError}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
                   {/* Email Input */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Email Address</Text>
@@ -497,6 +612,41 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Login Mode Toggle Styles
+  loginModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  modeButtonActive: {
+    backgroundColor: '#7CC39F',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  modeButtonTextActive: {
+    color: '#FFFFFF',
   },
 });
 

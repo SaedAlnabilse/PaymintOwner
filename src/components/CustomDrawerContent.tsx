@@ -58,7 +58,7 @@ const CustomDrawerContent = (props: any) => {
     'Products', 'Attributes', 'Manufacturing', 'Recipes', // Inventory
     'Staff', 'Customers', // People
     'Settings', 'AuditLog', 'Notifications', // System
-    'OwnerOverview', 'OwnerEmployees', 'Brands', 'Establishments', 'AdminUsers' // Owner Portal
+    'OwnerOverview', 'OwnerEmployees', 'Brands', 'Establishments', 'AdminUsers', 'AccountManagement' // Owner Portal
   ];
 
   // Calculate filtered routes
@@ -422,6 +422,16 @@ const CustomDrawerContent = (props: any) => {
                   icon={({ color }) => <MaterialCommunityIcon name="account-key" size={20} color={color} />}
                   onPress={() => props.navigation.navigate('AdminUsers')}
                   focused={isRouteActive('AdminUsers')}
+                  labelStyle={styles.subItemLabel}
+                  style={styles.subItem}
+                  activeTintColor={theme.colors.primary}
+                  inactiveTintColor={COLORS.textSecondary}
+                />
+                <DrawerItem
+                  label="Account Management"
+                  icon={({ color }) => <MaterialCommunityIcon name="account-cog" size={20} color={color} />}
+                  onPress={() => props.navigation.navigate('AccountManagement')}
+                  focused={isRouteActive('AccountManagement')}
                   labelStyle={styles.subItemLabel}
                   style={styles.subItem}
                   activeTintColor={theme.colors.primary}

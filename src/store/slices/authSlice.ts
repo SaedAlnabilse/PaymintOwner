@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService, LoginCredentials, AccountLoginCredentials } from '../../services/authService';
+import { authService, LoginCredentials, AccountLoginCredentials, EmployeeBackofficeLoginCredentials } from '../../services/authService';
 import { RootState } from '../store';
 
 const APP_BACKGROUND_TIME_KEY = '@app_background_time';
@@ -184,6 +184,18 @@ export const logoutAccount = createAsyncThunk(
   }
 );
 
+export const loginEmployeeBackoffice = createAsyncThunk(
+  'auth/loginEmployeeBackoffice',
+  async (credentials: EmployeeBackofficeLoginCredentials, { rejectWithValue }) => {
+    try {
+      const response = await authService.loginEmployeeBackoffice(credentials);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -330,6 +342,42 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isLoading = false;
         state.error = null;
+      })
+      // Employee Back Office login handlers
+      .addCase(loginEmployeeBackoffice.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginEmployeeBackoffice.fulfilled, (state, action) => {
+        state.token = action.payload.access_token;
+        state.user = {
+          id: action.payload.employee.id,
+          name: `${action.payload.employee.firstName} ${action.payload.employee.lastName}`,
+          role: action.payload.role,
+          email: action.payload.employee.email,
+        };
+        state.currentEstablishment = {
+          id: action.payload.establishment.id,
+          name: action.payload.establishment.name,
+          establishmentLoginId: action.payload.establishment.id,
+          type: '',
+          currency: action.payload.establishment.currency,
+          subscriptionStatus: 'active',
+        };
+        state.selectedTenant = {
+          id: action.payload.establishment.id,
+          name: action.payload.establishment.name,
+          slug: action.payload.establishment.id,
+        };
+        state.isAuthenticated = true;
+        state.isLoading = false;
+        state.error = null;
+
+        clearBackgroundTime();
+      })
+      .addCase(loginEmployeeBackoffice.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });

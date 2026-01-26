@@ -45,6 +45,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import OwnerEmployeesScreen from '../screens/OwnerEmployeesScreen';
+import AccountManagementScreen from '../screens/AccountManagementScreen';
 
 import { RootState, AppDispatch } from '../store/store';
 import { checkAuthStatus } from '../store/slices/authSlice';
@@ -62,7 +63,7 @@ const DrawerNavigator = () => {
   const { isDarkMode } = useTheme();
   const COLORS = getColors(isDarkMode);
   const theme = usePaperTheme() as unknown as AppTheme;
-  const { currentEstablishment, account } = useSelector((state: RootState) => state.auth);
+  const { currentEstablishment, account, user } = useSelector((state: RootState) => state.auth);
 
   return (
     <Drawer.Navigator
@@ -73,7 +74,7 @@ const DrawerNavigator = () => {
           return (
             <BackOfficeHeader
               storeName={currentEstablishment?.name || "PayMint Store"}
-              userName={account?.firstName || "Owner"}
+              userName={account?.firstName || user?.name || "Owner"}
               storeStatus="CLOSED"
               onMenuPress={() => navigation.toggleDrawer()}
               onNotificationsPress={() => navigation.navigate('Notifications')}
@@ -318,6 +319,16 @@ const DrawerNavigator = () => {
             <Icon name="tag-heart" size={22} color={color} />
           ),
           title: 'Brands'
+        }}
+      />
+      <Drawer.Screen
+        name="AccountManagement"
+        component={AccountManagementScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Icon name="account-cog" size={22} color={color} />
+          ),
+          title: 'Account Management'
         }}
       />
     </Drawer.Navigator >

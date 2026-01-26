@@ -8,6 +8,12 @@ export interface User {
   role: 'ADMIN' | 'USER' | 'EMPLOYEE' | 'MANAGER'; // Adjust based on actual enums
   pinCode?: string;
   isClockedIn?: boolean; // Derived or from specific endpoint
+  permissions?: string[];
+  backofficePermissions?: string[];
+  allowedDiscounts?: string[];
+  customRoleId?: string;
+  posAccess?: boolean;
+  backofficeAccess?: boolean;
 }
 
 export interface CreateUserDto {
@@ -17,6 +23,12 @@ export interface CreateUserDto {
   password: string; // Required
   pinCode?: string; // Optional (auto-generated)
   role: string;
+  permissions?: string[];
+  backofficePermissions?: string[];
+  allowedDiscounts?: string[];
+  customRoleId?: string;
+  posAccess?: boolean;
+  backofficeAccess?: boolean;
 }
 
 export interface UpdateUserDto {
@@ -27,7 +39,11 @@ export interface UpdateUserDto {
   password?: string;
   role?: string;
   permissions?: string[];
+  backofficePermissions?: string[];
   allowedDiscounts?: string[];
+  customRoleId?: string;
+  posAccess?: boolean;
+  backofficeAccess?: boolean;
 }
 
 export const getUsers = async (): Promise<User[]> => {

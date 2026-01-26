@@ -22,6 +22,43 @@ export interface AccountLoginCredentials {
   password: string;
 }
 
+// Employee Back Office login credentials
+export interface EmployeeBackofficeLoginCredentials {
+  email: string;
+  password: string;
+  establishmentId: string;
+}
+
+// Employee Back Office login response
+export interface EmployeeBackofficeLoginResponse {
+  access_token: string;
+  employee: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatar?: string;
+  };
+  establishment: {
+    id: string;
+    name: string;
+    currency: string;
+    brandId?: string;
+  };
+  role: string;
+  customRoleId?: string;
+  backofficePermissions: string[];
+  hasBrandAccess: boolean;
+  accessibleEstablishments: Array<{
+    id: string;
+    name: string;
+    type: string;
+    currency: string;
+    logo?: string;
+  }>;
+}
+
 // Account login response
 export interface AccountLoginResponse {
   access_token: string;
@@ -395,6 +432,59 @@ class AuthService {
       await AsyncStorage.removeItem(CURRENT_ESTABLISHMENT_KEY);
     } catch (error) {
       console.error('Failed to clear current establishment:', error);
+    }
+  }
+
+  // ========== EMPLOYEE BACKOFFICE LOGIN ==========
+
+  async loginEmployeeBackoffice(credentials: EmployeeBackofficeLoginCredentials): Promise<EmployeeBackofficeLoginResponse> {
+    try {
+      const response = await apiClient.post('/api/employees/backoffice-login', {
+        email: credentials.email,
+        password: credentials.password,
+        establishmentId: credentials.establishmentId,
+      });
+
+      const data: EmployeeBackofficeLoginResponse = response.data;
+
+      if (data.access_token) {
+        await this.storeToken(data.access_token);
+
+        // Store employee as user
+        if (data.employee) {
+          await this.storeUser({
+            id: data.employee.id,
+            name: `${data.employee.firstName} ${data.employee.lastName}`,
+            email: data.employee.email,
+            role: data.role,
+          });
+        }
+
+        // Store establishment
+        if (data.establishment) {
+          await this.storeCurrentEstablishment({
+            id: data.establishment.id,
+            name: data.establishment.name,
+            establishmentLoginId: data.establishment.id,
+            type: '',
+            currency: data.establishment.currency,
+            subscriptionStatus: 'active',
+          });
+          await this.storeTenant({
+            id: data.establishment.id,
+            name: data.establishment.name,
+            slug: data.establishment.id,
+          });
+        }
+
+        // Send FCM token to backend after successful login
+        await pushNotificationService.sendPendingToken();
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Employee backoffice login failed:', error.response?.data || error.message);
+      throw error;
     }
   }
 }
