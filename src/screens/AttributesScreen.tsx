@@ -292,9 +292,9 @@ const AttributesScreen = () => {
             </Text>
           </View>
         </View>
-        {subAttr.price > 0 && (
+        {Number(subAttr.price) > 0 && (
           <Text style={[styles.subAttributePrice, { color: COLORS.primary }]}>
-            +{subAttr.price.toFixed(2)} JOD
+            +{Number(subAttr.price).toFixed(2)} JOD
           </Text>
         )}
       </View>

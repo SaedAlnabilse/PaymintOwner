@@ -17,7 +17,24 @@ const StoreProfileModal: React.FC<StoreProfileModalProps> = ({ visible, onClose,
   const COLORS = getColors(isDarkMode);
   const styles = createStyles(COLORS);
 
-  if (!settings) return null;
+  if (!settings) {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { alignItems: 'center', justifyContent: 'center' }]}>
+            <Icon name="loading" size={40} color={COLORS.primary} />
+            <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Loading...</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal

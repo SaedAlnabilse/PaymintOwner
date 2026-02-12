@@ -23,7 +23,6 @@ interface AccountDetails {
   email: string;
   firstName: string;
   lastName: string;
-  phone?: string;
   establishmentLoginId?: string;
   createdAt: string;
   lastLoginAt?: string;
@@ -214,21 +213,6 @@ const AccountManagementScreen: React.FC<{ navigation: any }> = ({ navigation }) 
                 )}
               </View>
             </View>
-
-            {accountDetails?.phone && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.infoRow}>
-                  <View style={styles.infoLabel}>
-                    <Icon name="phone" size={18} color={COLORS.textSecondary} />
-                    <Text style={[styles.infoLabelText, { color: COLORS.textSecondary }]}>Phone</Text>
-                  </View>
-                  <Text style={[styles.infoValue, { color: COLORS.textPrimary }]}>
-                    {accountDetails.phone}
-                  </Text>
-                </View>
-              </>
-            )}
 
             <View style={styles.divider} />
 

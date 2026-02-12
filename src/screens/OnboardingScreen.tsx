@@ -61,7 +61,6 @@ const OnboardingScreen: React.FC = () => {
   const [establishmentPassword, setEstablishmentPassword] = useState('');
   const [currency, setCurrency] = useState('JOD');
   const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
   const [taxRate, setTaxRate] = useState('16');
   const [serviceCharge, setServiceCharge] = useState('0');
 
@@ -138,7 +137,6 @@ const OnboardingScreen: React.FC = () => {
         establishmentPassword: establishmentPassword,
         currency,
         address: address.trim(),
-        phone: phone.trim(),
         taxRate: parseFloat(taxRate) / 100,
         serviceCharge: parseFloat(serviceCharge) / 100,
       });
@@ -311,21 +309,6 @@ const OnboardingScreen: React.FC = () => {
             onChangeText={setAddress}
             placeholder="Street address"
             placeholderTextColor={COLORS.textSecondary}
-          />
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={[styles.formLabel, { color: COLORS.textSecondary }]}>Phone (Optional)</Text>
-        <View style={[styles.inputContainer, { backgroundColor: COLORS.cardBackground }]}>
-          <Icon name="phone" size={20} color={COLORS.textSecondary} />
-          <TextInput
-            style={[styles.input, { color: COLORS.textPrimary }]}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="+962 7XX XXX XXX"
-            placeholderTextColor={COLORS.textSecondary}
-            keyboardType="phone-pad"
           />
         </View>
       </View>

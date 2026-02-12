@@ -94,6 +94,8 @@ const SettingsScreen = () => {
 
   const [restaurantName, setRestaurantName] = useState('Loading...');
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [showStoreProfile, setShowStoreProfile] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
@@ -103,13 +105,19 @@ const SettingsScreen = () => {
   const [showDangerZone, setShowDangerZone] = useState(false);
 
   const fetchSettings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const data = await getAppSettings();
+      console.log('✅ Settings loaded:', data);
       setSettings(data);
       setRestaurantName(data.restaurantName || 'My Restaurant');
-    } catch (error) {
-      console.error('Failed to load settings:', error);
+    } catch (err: any) {
+      console.error('❌ Failed to load settings:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to load settings');
       setRestaurantName('My Restaurant');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -182,6 +190,34 @@ const SettingsScreen = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <Icon name="loading" size={40} color={COLORS.primary} />
+            <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>
+              Loading settings...
+            </Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <View style={[styles.section, { backgroundColor: COLORS.errorBg + '20', borderRadius: 12, padding: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="alert-circle" size={24} color={COLORS.error} />
+              <Text style={{ color: COLORS.error, fontWeight: '600', flex: 1 }}>
+                {error}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={fetchSettings}
+              style={{ marginTop: 12, backgroundColor: COLORS.primary, padding: 12, borderRadius: 8, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#FFF', fontWeight: '600' }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* General Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
@@ -480,6 +516,16 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   buildNumber: {
     fontSize: 11,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

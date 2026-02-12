@@ -24,7 +24,6 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -45,7 +44,6 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [firstNameFocused, setFirstNameFocused] = useState(false);
   const [lastNameFocused, setLastNameFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
-  const [phoneFocused, setPhoneFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
 
@@ -128,7 +126,6 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         password: password.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: phone.trim() || undefined,
       });
 
       setRegisteredEmail(email.trim());
@@ -312,29 +309,6 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                         <Text style={styles.fieldErrorText}>{emailError}</Text>
                       </View>
                     )}
-                  </View>
-
-                  {/* Phone Input (Optional) */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Phone Number (Optional)</Text>
-                    <View
-                      style={[
-                        styles.inputContainer,
-                        phoneFocused && styles.inputFocused,
-                      ]}
-                    >
-                      <Icon name="phone" size={20} color={phoneFocused ? '#7CC39F' : '#94A3B8'} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="+1 (555) 000-0000"
-                        placeholderTextColor="#94A3B8"
-                        value={phone}
-                        onChangeText={setPhone}
-                        onFocus={() => setPhoneFocused(true)}
-                        onBlur={() => setPhoneFocused(false)}
-                        keyboardType="phone-pad"
-                      />
-                    </View>
                   </View>
 
                   {/* Password Input */}

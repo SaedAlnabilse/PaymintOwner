@@ -3,12 +3,25 @@ import { apiClient } from './apiClient';
 export interface AppSettings {
   id: string;
   restaurantName: string;
+  restaurantDescription?: string;
+  restaurantAddress?: string;
   openingTime: string;
   closingTime: string;
   farewellMessage: string;
   logo: string | null;
+  currency: string;
+  taxRate: number;
   createdAt: string;
   updatedAt: string;
+  // Receipt settings
+  receiptHeader?: string;
+  receiptFooter?: string;
+  showRestaurantName?: boolean;
+  showDescription?: boolean;
+  showAddress?: boolean;
+  showTaxId?: boolean;
+  showFarewellMessage?: boolean;
+  taxIdNumber?: string;
 }
 
 export const getAppSettings = async (): Promise<AppSettings> => {
